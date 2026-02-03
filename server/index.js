@@ -30,12 +30,23 @@ const {
 
 const app = express();
 app.use(express.json());
+const allowedOrigins = new Set([
+  "https://arata.website",
+  "https://www.arata.website"
+]);
 app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", "https://arata.website");
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.has(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  }
   res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   if (req.method === "OPTIONS") return res.sendStatus(204);
   next();
+});
+
+app.get("/", (_req, res) => {
+  res.json({ ok: true, message: "Arata apply API is running" });
 });
 
 const upload = multer({

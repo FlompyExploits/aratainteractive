@@ -2214,16 +2214,17 @@
                         body: formData
                     });
                     const data = await res.json().catch(() => ({}));
-                    if (res.ok && data.ok) {
-                        applyStatus.textContent = "Application sent! We'll review it soon.";
-                        applyForm.reset();
-                    } else {
-                        applyStatus.textContent = data.error || "Failed to submit application.";
-                    }
-                } catch (err) {
-                    applyStatus.textContent = "Failed to submit application.";
+                if (res.ok && data.ok) {
+                    applyStatus.textContent = "Application sent! We'll review it soon.";
+                    applyForm.reset();
+                } else {
+                    const errMsg = data.error || `Failed to submit application (status ${res.status}).`;
+                    applyStatus.textContent = errMsg;
                 }
-            });
+            } catch (err) {
+                applyStatus.textContent = "Failed to submit application. Please try again.";
+            }
+        });
         }
 
         // 3D Tilting Effect Logic
