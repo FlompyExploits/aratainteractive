@@ -1,0 +1,2250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ARATA INTERACTIVE</title>
+    
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23050505' rx='20'/><path d='M50 20 L80 80 L65 80 L58 65 L42 65 L35 80 L20 80 Z M50 35 L55 55 L45 55 Z' fill='%23fff'/></svg>" type="image/svg+xml">
+
+    <meta property="og:title" content="ARATA INTERACTIVE">
+    <meta property="og:description" content="We bring worlds to life.">
+    <meta name="theme-color" content="#050505">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Sora:wght@300;400;500;600&family=IBM+Plex+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="preload" as="image" href="https://tr.rbxcdn.com/180DAY-c572f7a41fbbce4aa4895ca088dc3e7b/768/432/Image/Webp/noFilter">
+    <link rel="preload" as="image" href="https://tr.rbxcdn.com/180DAY-d75f77620b864da3f780ab6d7cd5bc99/512/512/Image/Webp/noFilter">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #07090f;
+            --bg-deep: #05060b;
+            --glass: rgba(16, 18, 26, 0.78);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --panel-strong: rgba(255, 255, 255, 0.06);
+            --text-soft: #9aa3ad;
+            --text-dim: #6b7280;
+            --sidebar-width: 300px;
+            --ease-out: cubic-bezier(0.18, 0.98, 0.2, 1);
+            --ease-smooth: cubic-bezier(0.2, 0.8, 0.2, 1);
+            --glow: 0 30px 80px rgba(0, 0, 0, 0.45);
+            --lift: 0 18px 50px rgba(0,0,0,0.45);
+            
+            /* Theme Colors */
+            --accent-ren: #38bdf8;
+            --accent-m1: #ef4444; 
+            --accent-zero: #e5e5e5;
+            --accent-k: #9333ea;
+            --accent-lummy: #3b82f6; 
+            --accent-sleepy: #1e3a8a;
+            --accent-cazu: #7f1d1d;
+            --accent-aizen: #9333ea;
+            --accent-eli: #89CFF0;
+            
+            --current-accent: #ffffff;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            background:
+                radial-gradient(1200px 800px at 15% 10%, rgba(56, 189, 248, 0.10), transparent 60%),
+                radial-gradient(900px 900px at 90% 25%, rgba(147, 51, 234, 0.12), transparent 60%),
+                linear-gradient(180deg, var(--bg-dark), var(--bg-deep));
+            color: #e9edf1;
+            font-family: 'Sora', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            letter-spacing: 0.15px;
+        }
+
+        #noise {
+            position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: 0.04;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        #appBg {
+            position: absolute; inset: 0; z-index: -2;
+            background-size: cover; background-position: center;
+            transition: background-image 0.8s ease-in-out;
+            filter: blur(90px) brightness(0.22) saturate(1.2);
+            transform: scale(1.1);
+        }
+
+        #colorOverlay {
+            position: absolute; inset: 0; z-index: -1;
+            background:
+                radial-gradient(circle at 20% 15%, rgba(255, 255, 255, 0.05), transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(56, 189, 248, 0.08), transparent 55%),
+                radial-gradient(circle at 50% 80%, rgba(147, 51, 234, 0.08), transparent 60%),
+                linear-gradient(180deg, rgba(7, 9, 15, 0.85), rgba(7, 9, 15, 0.98));
+            opacity: 1;
+            transition: background 0.6s ease;
+        }
+        
+        #trailCanvas { display: none; }
+
+        /* Sidebar Navigation */
+        aside {
+            width: var(--sidebar-width); 
+            background: linear-gradient(180deg, rgba(16, 18, 26, 0.95), rgba(10, 12, 18, 0.9));
+            border-right: 1px solid rgba(255, 255, 255, 0.06);
+            display: flex; flex-direction: column; padding: 42px 28px; z-index: 20;
+            backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px);
+            transition: transform 0.4s var(--ease-out);
+            overflow-y: auto;
+            max-height: 100vh;
+            box-shadow: 15px 0 60px rgba(0, 0, 0, 0.45);
+        }
+        aside::-webkit-scrollbar { width: 0; }
+
+        .brand { 
+            font-family: 'Space Grotesk', sans-serif; font-size: 0.95rem; font-weight: 700; 
+            color: #fff; display: flex; align-items: center; gap: 15px; 
+            margin-bottom: 46px; letter-spacing: 1px; text-transform: uppercase;
+            flex-shrink: 0;
+        }
+        .brand-logo { width: 36px; height: 36px; border-radius: 12px; box-shadow: 0 10px 20px rgba(0,0,0,0.35); }
+
+        .nav-label { 
+            font-size: 0.6rem; font-weight: 800; color: #6e7580; 
+            text-transform: uppercase; letter-spacing: 2px; 
+            margin: 25px 0 10px 10px; 
+        }
+
+        .nav-btn {
+            display: flex; align-items: center; gap: 14px; padding: 12px 14px;
+            border-radius: 14px; cursor: pointer; color: #9aa3ad; font-weight: 600; 
+            transition: all 0.25s var(--ease-out); margin-bottom: 6px; 
+            font-size: 0.9rem; flex-shrink: 0; border: 1px solid rgba(255, 255, 255, 0.04);
+            background: rgba(255,255,255,0.02);
+            backdrop-filter: blur(8px);
+        }
+        .nav-btn:hover { background: rgba(255,255,255,0.06); color: #fff; transform: translateX(4px); }
+        .nav-btn.active { 
+            background: linear-gradient(120deg, rgba(255,255,255,0.12), rgba(255,255,255,0.04)); color: #fff; 
+            border-color: rgba(255, 255, 255, 0.12); 
+            box-shadow: 0 12px 30px rgba(0,0,0,0.35); 
+        }
+        .nav-btn img { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
+        .nav-text { display: flex; flex-direction: column; line-height: 1.1; }
+        .nav-name { font-weight: 700; }
+        .nav-role { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1px; color: #6b7280; margin-top: 2px; }
+
+        /* Music Player */
+        .player { margin-top: auto; padding-top: 28px; border-top: 1px solid rgba(255,255,255,0.08); flex-shrink: 0; }
+        
+        .video-container {
+            width: 100%; aspect-ratio: 16/9; background: #050505; border-radius: 12px; overflow: hidden;
+            margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.1); position: relative;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.55);
+        }
+        .mini-video { width: 100%; height: 100%; object-fit: cover; opacity: 0.3; transition: opacity 0.5s; }
+        .playing .mini-video { opacity: 0.8; }
+
+        .song-info { margin-bottom: 12px; display: block; }
+        .song-title { font-size: 0.85rem; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .song-artist { font-size: 0.7rem; color: #666; font-weight: 500; margin-top: 3px; }
+
+        .controls { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+        .play-btn { 
+            width: 36px; height: 36px; background: #fff; color: #000; border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; cursor: pointer; 
+            transition: transform 0.2s; flex-shrink: 0;
+        }
+        .play-btn:active { transform: scale(0.9); }
+        
+        .volume-container { display: flex; align-items: center; gap: 8px; flex: 1; }
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; cursor: pointer; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 3px; background: rgba(255,255,255,0.1); border-radius: 3px; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 10px; width: 10px; border-radius: 50%; background: #fff; margin-top: -3.5px; box-shadow: 0 0 10px rgba(255,255,255,0.5); }
+        
+        .time-info { display: flex; justify-content: space-between; font-size: 0.6rem; color: #444; font-family: 'JetBrains Mono', monospace; margin-top: 6px; }
+
+        /* Main Content */
+        main { flex: 1; overflow-y: auto; position: relative; scroll-behavior: smooth; z-index: 10; }
+        main::-webkit-scrollbar { width: 6px; }
+        main::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+
+        .page { display: none; padding: 70px 90px; max-width: 1400px; margin: 0 auto; animation: fadeUp 0.5s var(--ease-out); }
+        .page.active { display: block; }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); filter: blur(5px); } to { opacity: 1; transform: translateY(0); filter: blur(0); } }
+
+        /* Home Page */
+        .home-container { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 85vh; text-align: center; gap: 10px; max-width: 1100px; margin: 0 auto; }
+        .home-logo { width: 80px; height: 80px; margin-bottom: 10px; filter: drop-shadow(0 0 30px rgba(255,255,255,0.15)); }
+        
+        .typewriter h1 {
+            font-family: 'Space Grotesk', sans-serif; font-size: clamp(2.6rem, 6vw, 5.2rem); font-weight: 800;
+            background: linear-gradient(to bottom, #fff 40%, #606570 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            letter-spacing: -2px; line-height: 0.98; text-transform: uppercase;
+        }
+        .subtitle { font-size: 0.95rem; color: var(--text-soft); font-weight: 500; letter-spacing: 6px; text-transform: uppercase; margin-top: 8px; }
+        
+        .cta-group { display: flex; gap: 14px; margin-top: 40px; flex-wrap: wrap; justify-content: center; }
+        .btn-cta {
+            padding: 14px 28px; border-radius: 14px; 
+            background: linear-gradient(135deg, rgba(255,255,255,0.14), rgba(255,255,255,0.04)); color: #fff;
+            text-decoration: none; font-weight: 700; font-size: 0.9rem; transition: 0.3s;
+            display: inline-flex; align-items: center; gap: 10px;
+            border: 1px solid rgba(255,255,255,0.12);
+        }
+        .btn-cta.tiktok { background: linear-gradient(135deg, #0b0b0b, #1b1b1b); }
+        .btn-cta:hover { transform: translateY(-3px); filter: brightness(1.08); box-shadow: var(--lift); }
+
+        .home-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-top: 70px; width: 100%; max-width: 900px; }
+        .h-stat { 
+            background: rgba(255, 255, 255, 0.03); padding: 22px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.08); 
+            cursor: pointer; transition: 0.3s var(--ease-out); text-align: left;
+            position: relative; box-shadow: var(--glow);
+        }
+        .h-stat:hover { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); }
+        .h-val { font-size: 2rem; font-weight: 700; display: block; color: #fff; margin-bottom: 5px; font-family: 'IBM Plex Mono', monospace; }
+        .h-lbl { font-size: 0.7rem; color: #87909a; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; display: flex; justify-content: space-between; }
+
+        /* Smoother Dropdown CSS */
+        .dropdown-content { 
+            position: relative;
+            display: block; 
+            max-height: 0; 
+            opacity: 0; 
+            overflow: hidden; 
+            transition: max-height 0.45s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease, transform 0.35s ease;
+            transform: translateY(-6px);
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(12, 14, 20, 0.96);
+            border-radius: 16px;
+            padding: 0 14px;
+            margin-top: 10px;
+            z-index: 1;
+            pointer-events: none;
+            box-shadow: 0 18px 40px rgba(0,0,0,0.45);
+        }
+        .h-stat.open .dropdown-content { 
+            max-height: 520px;
+            opacity: 1; 
+            transform: translateY(0);
+            padding: 12px 14px 16px;
+            pointer-events: auto;
+        }
+        .dd-title { font-size: 0.6rem; font-weight: 900; opacity: 0.3; margin-bottom: 5px; text-transform: uppercase; }
+        .dd-item { display: block; color: #aaa; font-size: 0.85rem; padding: 4px 0; cursor: pointer; transition: 0.2s; }
+        .dd-item:hover { color: #fff; transform: translateX(5px); }
+        .dd-item.small { font-size: 0.78rem; color: #8b94a0; }
+        .dd-item.link { display: flex; align-items: center; justify-content: space-between; }
+        .dd-item .dd-chevron { opacity: 0.5; }
+
+        /* Main Project Card */
+        .main-project-card {
+            margin-top: 70px; width: 100%; max-width: 900px; background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01)); 
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 28px; overflow: hidden; position: relative;
+            text-align: left; transition: 0.35s var(--ease-out);
+        }
+        .main-project-card:hover { border-color: rgba(255,255,255,0.2); box-shadow: 0 30px 70px rgba(0,0,0,0.5); transform: translateY(-2px); }
+        .mp-banner { width: 100%; height: 280px; object-fit: cover; mask-image: linear-gradient(to bottom, black 20%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 20%, transparent 100%); }
+        .mp-content { padding: 0 50px 44px 50px; margin-top: -100px; position: relative; }
+        .mp-header { display: flex; align-items: flex-end; gap: 25px; margin-bottom: 20px; }
+        .mp-icon { width: 80px; height: 80px; border-radius: 18px; border: 1px solid var(--glass-border); box-shadow: 0 10px 30px #000; }
+        .mp-title { font-size: 3rem; font-weight: 800; line-height: 1; letter-spacing: -2px; font-family: 'Space Grotesk', sans-serif; }
+        
+        /* Profile Layout */
+        .profile-banner { width: 100%; height: 360px; object-fit: cover; border-radius: 26px; mask-image: linear-gradient(to bottom, black 50%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%); background: #111; }
+        .profile-header { padding: 0 40px; margin-top: -120px; position: relative; display: flex; align-items: flex-end; gap: 40px; flex-wrap: wrap; }
+        .pfp-box { position: relative; width: 180px; height: 180px; flex-shrink: 0; }
+        .pfp-img { width: 100%; height: 100%; border-radius: 50%; border: 6px solid var(--bg-dark); background: #111; object-fit: cover; box-shadow: 0 18px 50px rgba(0,0,0,0.55); }
+        .status-badge { position: absolute; bottom: 12px; right: 12px; width: 36px; height: 36px; border-radius: 50%; border: 5px solid var(--bg-dark); z-index: 5; display: flex; align-items: center; justify-content: center; }
+        .status-online { background: #23a559; } .status-dnd { background: #f23f43; } .status-idle { background: #f0b232; } .status-offline { background: #747f8d; }
+        
+        .user-info h1 { font-size: 4.4rem; font-weight: 800; line-height: 0.95; margin-bottom: 10px; letter-spacing: -2px; font-family: 'Space Grotesk', sans-serif; }
+        .stats-col { display: flex; flex-direction: column; gap: 5px; margin-bottom: 20px; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: #ccc; }
+        .stat-item { background: rgba(255,255,255,0.06); padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06); display: inline-block; width: fit-content; }
+        .title-badge { background: #fff; color: #000; font-weight: 900; }
+        
+        .socials-row { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .social-btn { height: 44px; min-width: 44px; padding: 0 20px; background: rgba(255,255,255,0.03); border-radius: 50px; display: flex; align-items: center; justify-content: center; color: #888; transition: 0.3s; border: 1px solid var(--glass-border); text-decoration: none; font-size: 1.1rem; }
+        .social-btn:hover { background: #fff; color: #000; transform: translateY(-3px); }
+        .social-btn.round { padding: 0; width: 44px; }
+
+        .rp-card { background: rgba(0,0,0,0.4); border: 1px solid var(--glass-border); padding: 15px; border-radius: 16px; display: inline-flex; align-items: center; gap: 15px; min-width: 300px; backdrop-filter: blur(20px); }
+        .rp-large { width: 60px; height: 60px; border-radius: 10px; background: #222; }
+        .rp-name { font-weight: 800; font-size: 0.9rem; color: #fff; }
+        .rp-state { font-size: 0.75rem; color: #888; }
+
+        .section-title { margin-top: 80px; margin-bottom: 30px; font-size: 0.75rem; font-weight: 800; color: #555; text-transform: uppercase; letter-spacing: 3px; display: flex; align-items: center; gap: 20px; }
+        .section-title::after { content: ''; height: 1px; flex: 1; background: rgba(255,255,255,0.08); }
+        
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 25px; }
+        .card { 
+            height: 220px; border-radius: 22px; position: relative; overflow: hidden; 
+            border: 1px solid rgba(255,255,255,0.1); cursor: pointer; 
+            transition: transform 0.25s var(--ease-out), box-shadow 0.35s var(--ease-out); 
+            background: linear-gradient(160deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02)); transform-style: preserve-3d;
+        }
+        .card:hover { border-color: rgba(255,255,255,0.2); box-shadow: 0 24px 60px rgba(0,0,0,0.55); }
+        .card-bg { width: 100%; height: 100%; object-fit: cover; transition: 0.6s var(--ease-out); opacity: 0.6; filter: grayscale(20%); }
+        .card:hover .card-bg { transform: scale(1.05); opacity: 0.4; filter: grayscale(0%) blur(0); }
+        .card-overlay { 
+            position: absolute; inset: 0; 
+            background: linear-gradient(to top, rgba(7,9,15,0.95), rgba(7,9,15,0.15)); 
+            display: flex; flex-direction: column; justify-content: flex-end; padding: 25px; 
+            transform: translateZ(20px); 
+        }
+        .card-tag { font-size: 0.6rem; font-weight: 800; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+        .card-title { font-size: 1.4rem; font-weight: 800; color: #fff; line-height: 1.1; font-family: 'Inter', sans-serif; letter-spacing: -0.5px; }
+
+        /* Modal */
+        .modal { position: fixed; inset: 0; background: rgba(5, 6, 10, 0.95); z-index: 2000; display: none; opacity: 0; transition: 0.3s; overflow-y: auto; backdrop-filter: blur(22px); }
+        .modal.open { display: block; opacity: 1; }
+        .modal-container { max-width: 1000px; margin: 60px auto; padding: 0 20px; animation: fadeUp 0.4s var(--ease-out); }
+        .close-btn { position: fixed; top: 30px; right: 30px; width: 50px; height: 50px; background: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 2001; border: 1px solid rgba(255,255,255,0.1); transition: 0.2s; }
+        .close-btn:hover { background: #fff; color: #000; transform: rotate(90deg); }
+        
+        .gallery-wrapper { position: relative; width: 100%; aspect-ratio: 16/9; border-radius: 24px; overflow: hidden; background: #000; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 30px 80px rgba(0,0,0,0.6); }
+        .gallery-img { width: 100%; height: 100%; object-fit: contain; display: none; }
+        .gallery-img.active { display: block; animation: fadeIn 0.4s; }
+        .gallery-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 50px; height: 50px; background: rgba(0,0,0,0.5); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); transition: 0.2s; }
+        .gallery-nav:hover { background: #fff; color: #000; }
+        .nav-left { left: 20px; } .nav-right { right: 20px; }
+        
+        .game-header { display: flex; gap: 30px; margin-top: 40px; align-items: flex-end; flex-wrap: wrap; }
+        .game-icon-main { width: 100px; height: 100px; border-radius: 20px; flex-shrink: 0; border: 1px solid var(--glass-border); box-shadow: 0 10px 30px #000; }
+        .game-title-lg { font-size: 3rem; font-weight: 900; line-height: 1; margin-bottom: 20px; letter-spacing: -2px; }
+        
+        /* "Way Better" Modal Buttons */
+        .btn-group { display: flex; gap: 15px; margin-top: 10px; }
+        .btn-action { 
+            padding: 15px 34px; border-radius: 16px; font-weight: 800; text-decoration: none; 
+            display: inline-flex; align-items: center; gap: 12px; font-size: 1rem; 
+            transition: all 0.3s var(--ease-out); position: relative; overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.1); text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .btn-play { 
+            background: #fff; color: #000; 
+            box-shadow: 0 10px 30px rgba(255,255,255,0.15); 
+        }
+        .btn-play:hover { 
+            transform: translateY(-4px) scale(1.02); 
+            box-shadow: 0 20px 50px rgba(255,255,255,0.3); 
+        }
+        .btn-discord { 
+            background: #5865F2; color: #fff; border: 1px solid #5865F2;
+            box-shadow: 0 10px 30px rgba(88, 101, 242, 0.25);
+        }
+        .btn-discord:hover { 
+            transform: translateY(-4px) scale(1.02); 
+            box-shadow: 0 20px 50px rgba(88, 101, 242, 0.5); 
+            background: #4752C4;
+        }
+
+        /* Themes */
+        .ren-theme h1, .ren-theme .s-name { color: var(--accent-ren); text-shadow: 0 0 50px rgba(56, 189, 248, 0.3); }
+        .m1-theme h1 { color: var(--accent-m1); text-shadow: 0 0 50px rgba(239, 68, 68, 0.3); }
+        .zero-theme h1 { color: var(--accent-zero); text-shadow: 0 0 50px rgba(229, 229, 229, 0.3); }
+        .k-theme h1 { color: var(--accent-k); text-shadow: 0 0 50px rgba(147, 51, 234, 0.3); }
+        .lummy-theme h1 { color: var(--accent-lummy); text-shadow: 0 0 50px rgba(59, 130, 246, 0.3); }
+        .sleepy-theme h1 { color: var(--accent-sleepy); text-shadow: 0 0 50px rgba(30, 58, 138, 0.3); }
+        .cazu-theme h1 { color: var(--accent-cazu); text-shadow: 0 0 50px rgba(127, 29, 29, 0.3); }
+        .aizen-theme h1 { color: var(--accent-aizen); text-shadow: 0 0 50px rgba(147, 51, 234, 0.3); }
+        .eli-theme h1 { color: var(--accent-eli); text-shadow: 0 0 50px rgba(137, 207, 240, 0.3); }
+
+        /* Mobile */
+        @media (max-width: 900px) {
+            body { flex-direction: column; height: auto; overflow-y: auto; }
+            #appBg, #noise, #trailCanvas, #colorOverlay { position: fixed; }
+            aside { 
+                width: 94%; max-width: 480px; height: 70px; 
+                position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); 
+                padding: 5px 15px; flex-direction: row; align-items: center; justify-content: space-between; 
+                border-radius: 24px; border: 1px solid rgba(255,255,255,0.1); 
+                background: rgba(10,10,10,0.8); z-index: 1000; box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            }
+            .brand, .nav-label { display: none !important; }
+            .nav-btn { 
+                width: 40px; height: 40px; padding: 0; margin: 0; background: transparent !important; 
+                justify-content: center; opacity: 0.5; border: none;
+            }
+            .nav-btn.active { opacity: 1; transform: scale(1.1); box-shadow: none; }
+            .nav-btn img { width: 32px; height: 32px; border: 2px solid transparent; }
+            .nav-btn.active img { border-color: var(--current-accent); box-shadow: 0 0 15px var(--current-accent); }
+            .nav-btn { font-size: 0; gap: 0; }
+            .nav-btn i { font-size: 1.1rem; }
+            .nav-btn.active i { color: #fff; }
+            .nav-text { display: none; }
+
+            .player { 
+                display: flex !important; position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+                width: 90%; max-width: 450px; background: rgba(20,20,20,0.85); 
+                border: 1px solid rgba(255,255,255,0.12); border-radius: 18px;
+                padding: 10px 15px; flex-direction: row; height: 65px; 
+                backdrop-filter: blur(30px); z-index: 999; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            }
+            .video-container { width: 45px; height: 45px; margin: 0; position: absolute; left: 10px; opacity: 0.6; }
+            .visualizer, .volume-container { display: none; }
+            #seek-slider { position: absolute; bottom: 0; left: 15px; width: calc(100% - 30px); height: 2px; }
+            .song-info { margin: 0; margin-left: 55px; text-align: left; flex: 1; }
+            .controls { margin: 0; } .time-info { display: none; }
+            
+            main { padding-bottom: 200px; width: 100%; overflow: visible; }
+            .page { padding: 40px 20px; }
+            .home-stats { grid-template-columns: 1fr; }
+            .profile-header { margin-top: -80px; justify-content: center; text-align: center; }
+            .user-info { align-items: center; display: flex; flex-direction: column; }
+            .user-info h1 { font-size: 3.5rem; }
+            .socials-row { justify-content: center; }
+            .grid { grid-template-columns: 1fr; }
+        }
+
+        /* --- OVERHAUL THEME: ARATA NOVA --- */
+        :root {
+            --bg-dark: #07090f;
+            --glass: rgba(12, 14, 20, 0.78);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --panel-strong: rgba(255, 255, 255, 0.06);
+            --text-soft: #9aa3ad;
+            --glow: 0 30px 80px rgba(0, 0, 0, 0.45);
+            --ease-out: cubic-bezier(0.18, 0.98, 0.2, 1);
+        }
+
+        body {
+            font-family: 'Sora', sans-serif;
+            background: radial-gradient(1200px 800px at 20% 10%, rgba(56, 189, 248, 0.08), transparent 60%),
+                        radial-gradient(900px 900px at 90% 30%, rgba(147, 51, 234, 0.08), transparent 60%),
+                        var(--bg-dark);
+            color: #e9edf1;
+            letter-spacing: 0.1px;
+        }
+
+        body.loading {
+            overflow: hidden;
+        }
+        #pageLoader {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(800px 800px at 50% 40%, rgba(255, 255, 255, 0.06), transparent 60%), #050608;
+            display: grid;
+            place-items: center;
+            z-index: 4000;
+            transition: opacity 0.6s ease, visibility 0.6s ease;
+        }
+        body:not(.loading) #pageLoader {
+            opacity: 0;
+            visibility: hidden;
+        }
+        .loader-orbit {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.08);
+            border-top-color: rgba(255, 255, 255, 0.7);
+            animation: spin 1.1s linear infinite;
+            box-shadow: 0 0 40px rgba(255, 255, 255, 0.15);
+        }
+        .loader-text {
+            margin-top: 20px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.7rem;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.6);
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        #noise { opacity: 0.06; mix-blend-mode: soft-light; }
+        #appBg { filter: blur(80px) brightness(0.22) saturate(1.2); }
+        #colorOverlay {
+            opacity: 1;
+            background:
+                radial-gradient(circle at 20% 15%, rgba(255, 255, 255, 0.06), transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(56, 189, 248, 0.08), transparent 55%),
+                radial-gradient(circle at 50% 80%, rgba(147, 51, 234, 0.08), transparent 60%),
+                linear-gradient(180deg, rgba(7, 9, 15, 0.85), rgba(7, 9, 15, 0.98));
+        }
+
+        aside {
+            width: 300px;
+            background: linear-gradient(180deg, rgba(16, 18, 26, 0.95), rgba(10, 12, 18, 0.9));
+            border-right: 1px solid rgba(255, 255, 255, 0.06);
+            box-shadow: 15px 0 60px rgba(0, 0, 0, 0.45);
+        }
+        .brand {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.95rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: #fff;
+        }
+        .brand-logo { border-radius: 12px; box-shadow: 0 10px 20px rgba(0,0,0,0.35); }
+        .nav-label { color: #6e7580; font-size: 0.6rem; }
+
+        .nav-btn {
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            background: rgba(255, 255, 255, 0.02);
+            color: #9aa3ad;
+            backdrop-filter: blur(8px);
+        }
+        .nav-btn:hover { background: rgba(255, 255, 255, 0.06); color: #fff; transform: translateX(4px); }
+        .nav-btn.active {
+            background: linear-gradient(120deg, rgba(255,255,255,0.12), rgba(255,255,255,0.04));
+            color: #fff;
+            border-color: rgba(255, 255, 255, 0.12);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+        }
+
+        main { background: transparent; padding-top: 84px; }
+        .page { padding: 70px 90px; max-width: 1400px; }
+        .home-container { align-items: center; text-align: center; gap: 10px; }
+        .home-logo { width: 80px; height: 80px; }
+        .typewriter h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            letter-spacing: -2px;
+            text-transform: uppercase;
+        }
+        .subtitle { letter-spacing: 6px; color: var(--text-soft); }
+        .cta-group { justify-content: center; }
+        .btn-cta {
+            border-radius: 14px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.14), rgba(255,255,255,0.04));
+            border: 1px solid rgba(255,255,255,0.12);
+            color: #fff;
+        }
+        .btn-cta.tiktok { background: linear-gradient(135deg, #0b0b0b, #1b1b1b); }
+
+        .home-stats {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+        }
+        .h-stat {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: var(--glow);
+        }
+        .h-val { font-family: 'IBM Plex Mono', monospace; }
+        .h-lbl { color: #87909a; }
+
+        .main-project-card {
+            border-radius: 28px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+        }
+
+        .section-title { color: #76808b; }
+
+        .card {
+            border-radius: 22px;
+            background: linear-gradient(160deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+        }
+        .card-overlay { background: linear-gradient(to top, rgba(7,9,15,0.95), rgba(7,9,15,0.15)); }
+
+        .profile-banner { border-radius: 26px; }
+        .user-info h1 { font-family: 'Space Grotesk', sans-serif; }
+
+        .modal { background: rgba(5, 6, 10, 0.95); }
+        .gallery-wrapper { border-radius: 24px; }
+
+        #trailCanvas { opacity: 0.6; }
+
+        @media (min-width: 1200px) {
+            .home-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+
+        @media (max-width: 900px) {
+            aside {
+                width: 94%;
+                height: 72px;
+                border-radius: 20px;
+                background: rgba(10, 12, 18, 0.9);
+            }
+            .page { padding: 36px 20px; }
+            .home-container { align-items: center; text-align: center; }
+            .cta-group { justify-content: center; }
+            .home-stats { grid-template-columns: 1fr; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * { animation: none !important; transition: none !important; }
+            #trailCanvas { display: none; }
+        }
+
+        .feature-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 40px; width: 100%; max-width: 900px; }
+        .feature-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            padding: 18px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #cfd6de;
+            transition: transform 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out);
+        }
+        .feature-card i { color: rgba(255,255,255,0.7); }
+        .feature-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,0.35); }
+
+        .partners-section { width: 100%; max-width: 900px; margin-top: 60px; text-align: left; }
+        .partner-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+        .partner-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px dashed rgba(255,255,255,0.2);
+            border-radius: 18px;
+            padding: 22px;
+            color: #9aa3ad;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 90px;
+        }
+        .partner-contact {
+            margin-top: 18px;
+            padding: 28px;
+            border-radius: 22px;
+            border: 1px solid rgba(88,101,242,0.25);
+            background: linear-gradient(140deg, rgba(88,101,242,0.12), rgba(88,101,242,0.04));
+            text-align: center;
+        }
+        .partner-contact p { color: #c9d0d8; line-height: 1.6; }
+        .partner-contact .p-highlight { color: #fff; font-weight: 800; }
+
+        .apply-section {
+            margin-top: 80px;
+            padding: 40px;
+            border-radius: 24px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 24px 60px rgba(0,0,0,0.35);
+            width: 100%;
+            max-width: 980px;
+        }
+        .apply-section h2 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2rem;
+            margin-bottom: 8px;
+        }
+        .apply-section p {
+            color: #9aa3ad;
+            margin-bottom: 18px;
+        }
+        .apply-roles {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .apply-role {
+            padding: 8px 12px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .apply-role.closed {
+            opacity: 0.5;
+        }
+        .apply-note {
+            font-size: 0.8rem;
+            color: #c7cdd6;
+            margin-bottom: 16px;
+        }
+        .apply-form {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+        }
+        .apply-form input,
+        .apply-form select,
+        .apply-form textarea {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(10,12,18,0.8);
+            color: #e9edf1;
+            font-size: 0.9rem;
+        }
+        .apply-form textarea {
+            min-height: 120px;
+            resize: vertical;
+            grid-column: 1 / -1;
+        }
+        .apply-form .full {
+            grid-column: 1 / -1;
+        }
+        .apply-submit {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 18px;
+            border-radius: 999px;
+            border: none;
+            background: #fff;
+            color: #000;
+            font-weight: 800;
+            cursor: pointer;
+            grid-column: 1 / -1;
+        }
+        .apply-status {
+            grid-column: 1 / -1;
+            font-size: 0.85rem;
+            color: #cbd5df;
+        }
+        @media (max-width: 900px) {
+            .apply-section { padding: 28px; }
+            .apply-form { grid-template-columns: 1fr; }
+        }
+
+        .section-block { width: 100%; max-width: 1100px; margin-top: 80px; scroll-margin-top: 90px; }
+        #partners { scroll-margin-top: 90px; }
+        #featured { transition: margin-top 0.35s var(--ease-out); }
+        #featured.directory-shift { margin-top: 140px; }
+
+        .top-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 18px 36px;
+            min-height: 64px;
+            background: rgba(12, 14, 20, 0.98);
+            backdrop-filter: blur(18px);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.45);
+            color: #e9edf1;
+        }
+        .top-bar.is-hidden {
+            transform: translateY(-110%);
+        }
+        .top-bar.is-compact {
+            padding: 10px 28px;
+            min-height: 54px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }
+        .top-bar,
+        .top-bar * {
+            transition: transform 0.25s var(--ease-out), padding 0.25s var(--ease-out), min-height 0.25s var(--ease-out), box-shadow 0.25s var(--ease-out);
+        }
+        .top-bar * { color: inherit; }
+        .top-brand {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            letter-spacing: 2px;
+            font-size: 0.9rem;
+            color: #dfe6ee;
+            text-transform: uppercase;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .top-brand img {
+            width: 26px;
+            height: 26px;
+            border-radius: 8px;
+            box-shadow: 0 8px 18px rgba(0,0,0,0.35);
+        }
+        .top-links {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .top-links a {
+            text-decoration: none;
+            color: #a5aebb;
+            font-size: 0.8rem;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            padding: 8px 14px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.08);
+            transition: 0.25s var(--ease-out);
+        }
+        .top-links a:hover {
+            color: #fff;
+            border-color: rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.06);
+        }
+        .top-actions .contact-btn {
+            text-decoration: none;
+            color: #0a0a0a;
+            background: #fff;
+            padding: 10px 18px;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+        }
+        .top-toggle {
+            border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(255,255,255,0.04);
+            color: #e9edf1;
+            padding: 8px 12px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+        }
+
+        .creator-role-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.62rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            padding: 6px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.12);
+            color: #cfd6de;
+            background: rgba(255,255,255,0.04);
+            margin-bottom: 8px;
+        }
+
+        .featured-row {
+            display: flex;
+            gap: 22px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+            scroll-snap-type: x mandatory;
+            justify-content: center;
+        }
+        .featured-row::-webkit-scrollbar { height: 6px; }
+        .featured-row::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 999px; }
+        .featured-card {
+            flex: 0 0 clamp(280px, 44vw, 460px);
+            background: rgba(10,12,18,0.7);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 22px;
+            overflow: hidden;
+            position: relative;
+            scroll-snap-align: start;
+            transition: transform 0.35s var(--ease-out), box-shadow 0.35s var(--ease-out);
+        }
+        .featured-card:hover { transform: translateY(-6px); box-shadow: 0 24px 70px rgba(0,0,0,0.55); }
+        .featured-card img { width: 100%; height: 220px; object-fit: cover; display: block; }
+        .featured-link { text-decoration: none; color: inherit; display: block; }
+        .featured-body { padding: 18px 20px 22px; }
+        .featured-badges { display: flex; gap: 8px; margin-bottom: 10px; }
+        .featured-badge { font-size: 0.62rem; letter-spacing: 1px; text-transform: uppercase; padding: 6px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.12); color: #cfd6de; background: rgba(255,255,255,0.04); }
+        .featured-name { font-size: 1.4rem; font-weight: 800; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
+        .featured-desc { color: #9aa3ad; font-size: 0.9rem; line-height: 1.5; }
+        .featured-stats { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+        .stat-pill { font-size: 0.65rem; padding: 6px 10px; border-radius: 999px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: #cdd3dc; }
+        .stat-pill.live { color: #fff; border-color: rgba(255,255,255,0.2); }
+
+        .creators-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 22px;
+        }
+        .creator-card {
+            display: block;
+            position: relative;
+            background: rgba(12,14,20,0.72);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 22px;
+            overflow: hidden;
+            padding: 22px;
+            text-decoration: none;
+            color: inherit;
+            transition: transform 0.35s var(--ease-out), box-shadow 0.35s var(--ease-out);
+        }
+        .creator-card:hover { transform: translateY(-6px); box-shadow: 0 22px 60px rgba(0,0,0,0.5); }
+        .creator-avatar-wrap { width: 100%; height: 200px; border-radius: 18px; overflow: hidden; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.03); }
+        .creator-avatar { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .creator-overlay { margin-top: 16px; }
+        .creator-role { font-size: 0.65rem; letter-spacing: 1px; text-transform: uppercase; color: #9aa3ad; margin-bottom: 6px; }
+        .creator-name { font-size: 1.15rem; font-weight: 800; }
+        .creator-handle { color: #7d8794; font-size: 0.85rem; margin-top: 4px; }
+
+        .dup-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+        .dup-card {
+            background: rgba(12,14,20,0.7);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            padding: 16px;
+        }
+        .dup-title { font-weight: 800; margin-bottom: 10px; }
+        .dup-meta { display: flex; flex-wrap: wrap; gap: 6px; }
+        .dup-pill { font-size: 0.65rem; padding: 6px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.12); color: #a6afba; }
+
+        @media (max-width: 900px) {
+            .feature-row { grid-template-columns: 1fr; }
+            .partner-grid { grid-template-columns: 1fr; }
+            .featured-row { padding-bottom: 4px; }
+            .creator-avatar-wrap { height: 180px; }
+            .top-bar { padding: 14px 18px; flex-direction: column; align-items: stretch; }
+            .top-links { justify-content: flex-start; }
+        }
+
+        /* Performance */
+        .page,
+        .featured-section,
+        .creators-section,
+        .partners-section,
+        .duplicates-section,
+        .updates-section,
+        .skills-section {
+            content-visibility: auto;
+            contain-intrinsic-size: 1px 900px;
+        }
+        .card,
+        .featured-card,
+        .creator-card,
+        .nav-btn {
+            will-change: transform;
+        }
+        @media (max-width: 900px) {
+            .card,
+            .featured-card,
+            .creator-card {
+                box-shadow: none;
+            }
+        }
+
+
+
+    </style>
+</head>
+<body class="loading">
+
+    <div id="pageLoader" aria-hidden="true">
+        <div class="loader-orbit"></div>
+        <div class="loader-text">ARATA INTERACTIVE</div>
+    </div>
+
+    <div id="colorOverlay"></div>
+    <div id="noise"></div>
+    <canvas id="trailCanvas" aria-hidden="true"></canvas>
+    <div id="appBg"></div>
+
+    <aside>
+        <div class="brand">
+            <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23fff' rx='20'/><path d='M50%2020%20L80%2080%20L65%2080%20L58%2065%20L42%2065%20L35%2080%20L20%2080%20Z%20M50%2035%20L55%2055%20L45%2055%20Z' fill='%23000'/></svg>" class="brand-logo" loading="eager" decoding="async">
+            ARATA INTERACTIVE
+        </div>
+        
+        <div class="nav-btn active" onclick="tab('home')"><i class="fa-solid fa-house"></i> Home</div>
+        
+        <div class="nav-label">Team</div>
+        <div class="nav-btn" id="nav-ren" onclick="tab('ren')">
+            <img src="https://images-ext-1.discordapp.net/external/al9Gt9DOyS9r2NqdNl9pCbwlCeV0P6YzNnpsH9nE3Tg/%3Fsize%3D512/https/cdn.discordapp.com/avatars/718594927998533662/a158bd3f9f24d39286bb72e480854b45.png?format=webp&quality=lossless" loading="lazy" decoding="async">
+            <span class="nav-text"><span class="nav-name">Ren</span><span class="nav-role">@Arata Founder</span></span>
+        </div>
+        <div class="nav-btn" id="nav-m1" onclick="tab('m1')">
+            <img src="https://media.discordapp.net/attachments/1453228131384299622/1467289637562351616/avatars-eXj5BxmAi3JBrcb1-gfiJLw-t1080x1080.jpg?ex=697fd776&is=697e85f6&hm=7e6ab09fbb260580d836e70e1964c68a5293f7be078eb2c5b81a1e36188a5962&=&format=webp&width=960&height=960" loading="lazy" decoding="async">
+            <span class="nav-text"><span class="nav-name">M1</span><span class="nav-role">@Arata Founder</span></span>
+        </div>
+        <div class="nav-btn" id="nav-k" onclick="tab('k')">
+            <img src="https://cdn.discordapp.com/embed/avatars/0.png" loading="lazy" decoding="async">
+            <span class="nav-text"><span class="nav-name">K</span><span class="nav-role">@Arata Founder</span></span>
+        </div>
+        
+        <div class="nav-label">Managers</div>
+        <div class="nav-btn" id="nav-zero" onclick="tab('zero')">
+            <img src="https://cdn.discordapp.com/embed/avatars/0.png" loading="lazy" decoding="async">
+            <span class="nav-text"><span class="nav-name">Zero</span><span class="nav-role">@Arata Manager</span></span>
+        </div>
+
+        <div class="nav-label">Supporting</div>
+        <div class="nav-btn" id="nav-eli" onclick="tab('eli')">
+            <img src="https://cdn.discordapp.com/embed/avatars/0.png" loading="lazy" decoding="async">
+            <span class="nav-text"><span class="nav-name">Eli</span><span class="nav-role">@Arata Support</span></span>
+        </div>
+        <div class="nav-btn" id="nav-aizen" onclick="tab('aizen')">
+            <img src="https://cdn.discordapp.com/embed/avatars/0.png" loading="lazy" decoding="async">
+            <span class="nav-text"><span class="nav-name">Aizen</span><span class="nav-role">@Arata Support</span></span>
+        </div>
+        <div class="nav-btn" id="nav-lummy" onclick="tab('lummy')">
+            <img src="https://images-ext-1.discordapp.net/external/Ppy223Erhwvgzm7NTMDL_SrvCZu_hG7ZSV0782oGH1U/%3Fsize%3D512/https/cdn.discordapp.com/avatars/913122767061274684/8c284e9465b491341f5e81e368fc39a5.png?format=webp&quality=lossless" loading="lazy" decoding="async">
+            <span class="nav-text"><span class="nav-name">LummY</span><span class="nav-role">@Arata Support</span></span>
+        </div>
+        <div class="nav-btn" id="nav-sleepy" onclick="tab('sleepy')">
+            <img src="https://media.discordapp.net/attachments/1467198563250471179/1467360799990223062/a3f4294141752e04779b3ec50f14c4e7.jpg?ex=698019bc&is=697ec83c&hm=9511bf58cc07dadcba1371d37ddc5d71b5b2a0d50ff1476e2924a4a624780de6&=&format=webp" loading="lazy" decoding="async">
+            <span class="nav-text"><span class="nav-name">Sleepy</span><span class="nav-role">@Arata Support</span></span>
+        </div>
+        <div class="nav-btn" id="nav-cazu" onclick="tab('cazu')">
+            <img src="https://images-ext-1.discordapp.net/external/DW8QPvoBT3zPQPsd7qVqVwyg4u_sWe-5XuPG_jbr0HQ/%3Fsize%3D512/https/cdn.discordapp.com/avatars/1150126168289317034/a_99eb30ff985318fa967d39a05152b1a4.gif" loading="lazy" decoding="async">
+            <span class="nav-text"><span class="nav-name">Cazu</span><span class="nav-role">@Arata Support</span></span>
+        </div>
+
+        <div class="player" id="player-ui">
+            <div class="video-container">
+                <video id="mini-video" class="mini-video" playsinline autoplay muted preload="metadata">
+                    <source id="video-source" src="" type="video/mp4">
+                </video>
+            </div>
+            <div class="visualizer">
+                <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+            </div>
+            <div class="song-info">
+                <div class="song-title" id="track-title">Select Profile</div>
+                <div class="song-artist" id="track-artist">Arata Studios</div>
+            </div>
+            <div class="controls">
+                <div class="play-btn" onclick="toggleVideo()"><i class="fa-solid fa-play" id="play-icon"></i></div>
+                <div class="volume-container">
+                    <i class="fa-solid fa-volume-high" style="font-size: 0.8rem; color: #888;"></i>
+                    <input type="range" id="vol-slider" max="1" step="0.05" value="0.5">
+                </div>
+            </div>
+            <input type="range" id="seek-slider" max="100" value="0">
+            <div class="time-info">
+                <span id="curr-time">0:00</span>
+                <span id="dur-time">0:00</span>
+            </div>
+        </div>
+    </aside>
+
+    <main>
+        <div class="top-bar">
+            <div class="top-brand">
+                <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23fff' rx='20'/><path d='M50%2020%20L80%2080%20L65%2080%20L58%2065%20L42%2065%20L35%2080%20L20%2080%20Z%20M50%2035%20L55%2055%20L45%2055%20Z' fill='%23000'/></svg>" alt="Arata" loading="eager" decoding="async">
+                ARATA INTERACTIVE
+            </div>
+            <div class="top-brand">
+                <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23fff' rx='20'/><path d='M50%2020%20L80%2080%20L65%2080%20L58%2065%20L42%2065%20L35%2080%20L20%2080%20Z%20M50%2035%20L55%2055%20L45%2055%20Z' fill='%23000'/></svg>" alt="Arata" loading="eager" decoding="async">
+                ARATA INTERACTIVE
+            </div>
+            <div class="top-links">
+                <a href="#" onclick="scrollToSection('home'); return false;">Home</a>
+                <a href="#" onclick="scrollToSection('featured'); return false;">Featured</a>
+                <a href="#" onclick="scrollToSection('creators'); return false;">Creators</a>
+                <a href="#" onclick="scrollToSection('duplicates'); return false;">Duplicates</a>
+                <a href="#" onclick="scrollToSection('partners'); return false;">Partners</a>
+                <a href="#" onclick="scrollToSection('apply'); return false;">Apply</a>
+            </div>
+            <div class="top-actions">
+                <button class="top-toggle" id="topbar-toggle" type="button">Toggle Bar</button>
+                <a href="contact.html" class="contact-btn">Contact Us</a>
+            </div>
+        </div>
+        <div id="home" class="page active">
+            <div class="home-container">
+                <div class="title-group">
+                    <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23fff' rx='20'/><path d='M50%2020%20L80%2080%20L65%2080%20L58%2065%20L42%2065%20L35%2080%20L20%2080%20Z%20M50%2035%20L55%2055%20L45%2055%20Z' fill='%23000'/></svg>" class="home-logo" loading="lazy" decoding="async">
+                    <div class="typewriter">
+                        <h1>ARATA INTERACTIVE</h1>
+                    </div>
+                </div>
+                <p class="subtitle">We bring worlds to life</p>
+                
+                <div class="cta-group">
+                    <a href="https://discord.gg/Y2Pt2MHt" target="_blank" class="btn-cta">
+                        <i class="fa-brands fa-discord"></i> Join Discord
+                    </a>
+                    <a href="https://www.tiktok.com/@arataroblox" target="_blank" class="btn-cta tiktok">
+                        <i class="fa-brands fa-tiktok"></i> @arataroblox
+                    </a>
+                </div>
+
+                <div class="feature-row">
+                    <div class="feature-card"><i class="fa-solid fa-layer-group"></i> Immersive Worlds</div>
+                    <div class="feature-card"><i class="fa-solid fa-bolt"></i> Fast Iteration</div>
+                    <div class="feature-card"><i class="fa-solid fa-people-group"></i> Creator First</div>
+                </div>
+
+                <div class="home-stats">
+                    <div class="h-stat">
+                        <span class="h-val">348M+</span>
+                        <span class="h-lbl">Combined Visits <i class="fa-solid fa-users"></i></span>
+                    </div>
+                    
+                    <div class="h-stat directory-stat" id="directory-stat">
+                        <span class="h-val" id="stats-directory">0 <i class="fa-solid fa-chevron-right h-arrow"></i></span>
+                        <span class="h-lbl">Directory <i class="fa-solid fa-list"></i></span>
+                        <div id="dd-directory" class="dropdown-content"></div>
+                    </div>
+                </div>
+
+                <div id="featured" class="section-block">
+                    <div class="section-title"><i class="fa-solid fa-star"></i> Featured</div>
+                    <div class="featured-row" id="featured-row"></div>
+                </div>
+
+                <div id="creators" class="section-block">
+                    <div class="section-title"><i class="fa-solid fa-user-astronaut"></i> Meet The Creators</div>
+                    <div class="creators-grid" id="creators-grid"></div>
+                </div>
+
+                <div class="main-project-card">
+                    <img src="https://tr.rbxcdn.com/180DAY-c572f7a41fbbce4aa4895ca088dc3e7b/768/432/Image/Webp/noFilter" class="mp-banner" loading="lazy" decoding="async">
+                    <div class="mp-content">
+                        <div class="mp-header">
+                            <img src="https://tr.rbxcdn.com/180DAY-d75f77620b864da3f780ab6d7cd5bc99/512/512/Image/Webp/noFilter" class="mp-icon" loading="lazy" decoding="async">
+                            <div>
+                                <div class="mp-title">ARATA</div>
+                                <div class="card-tag">Main Project</div>
+                            </div>
+                        </div>
+                        <p style="color: #ccc; line-height: 1.6; font-size: 1.1rem;">The flagship project of Arata Interactive. A world of intense combat and immersive storytelling.</p>
+                        <div style="margin-top: 25px;">
+                            <a href="https://www.roblox.com/games/98861725687885/ARATA" target="_blank" class="btn-action btn-play"><i class="fa-solid fa-play"></i> Play</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="duplicates" class="section-block">
+                    <div class="section-title"><i class="fa-solid fa-layer-group"></i> Duplicates</div>
+                    <div class="dup-grid" id="dup-grid"></div>
+                </div>
+
+                <div id="apply" class="apply-section section-block">
+                    <h2>Wanna join Arata Interactive?</h2>
+                    <p>All positions are open right now except Manager. Please apply below.</p>
+                    <div class="apply-roles">
+                        <span class="apply-role">Programmer</span>
+                        <span class="apply-role">QA</span>
+                        <span class="apply-role">VFX</span>
+                        <span class="apply-role">UI/UX</span>
+                        <span class="apply-role">Animator</span>
+                        <span class="apply-role">Map Designer</span>
+                        <span class="apply-role closed">Manager (Closed)</span>
+                    </div>
+                    <div class="apply-note">Please do not send us a joke message!</div>
+                    <form id="apply-form" class="apply-form" enctype="multipart/form-data">
+                        <input type="text" name="name" placeholder="Full Name" required>
+                        <input type="email" name="email" placeholder="Email" required>
+                        <input type="text" name="discord_username" placeholder="Discord Username (e.g. user#1234)" required>
+                        <input type="text" name="discord_id" placeholder="Discord ID" required>
+                        <select name="position" class="full" required>
+                            <option value="" disabled selected>Select a position</option>
+                            <option>Programmer</option>
+                            <option>QA</option>
+                            <option>VFX</option>
+                            <option>UI/UX</option>
+                            <option>Animator</option>
+                            <option>Map Designer</option>
+                        </select>
+                        <textarea name="message" placeholder="Tell us about yourself and what you can do." required></textarea>
+                        <input type="file" name="resume" class="full" accept=".pdf,.png,.jpg,.jpeg" required>
+                        <button class="apply-submit" type="submit">Submit Application</button>
+                        <div id="apply-status" class="apply-status"></div>
+                    </form>
+                </div>
+
+                <div class="partners-section" id="partners">
+                    <div class="section-title"><i class="fa-solid fa-handshake"></i> Partners</div>
+                    <div class="partner-grid" id="partner-grid"></div>
+                    <div class="partner-contact">
+                        <p id="partner-text">Want to collaborate? DM the <span class="p-highlight">Manager</span> or any of the <span class="p-highlight">@Arata Founders</span> inside our Discord.</p>
+                        <div style="margin-top: 18px;">
+                            <a href="https://discord.gg/Y2Pt2MHt" target="_blank" class="btn-cta">
+                                <i class="fa-brands fa-discord"></i> Contact on Discord
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="ren" class="page ren-theme">
+            <img src="" class="profile-banner" id="banner-ren" loading="lazy" decoding="async">
+            <div class="profile-header">
+                <div class="pfp-box">
+                    <img src="" class="pfp-img" loading="lazy" decoding="async">
+                    <div class="status-badge" id="status-ren"></div>
+                </div>
+                <div class="user-info">
+                    <h1>Ren</h1>
+                    <div class="stats-col">
+                        <span class="stat-item title-badge">Founder</span>
+                        <span class="stat-item">258M+ Visits Contributed</span>
+                        <span class="stat-item">Scripter / VFX</span>
+                    </div>
+                    <div class="socials-row">
+                        <a href="https://www.roblox.com/users/4885165670/profile" target="_blank" class="social-btn round"><i class="fa-solid fa-gamepad"></i></a>
+                        <a href="https://discord.com/users/718594927998533662" target="_blank" class="social-btn round"><i class="fa-brands fa-discord"></i></a>
+                        <a href="https://www.tiktok.com/@rennnnnnyyyyy" target="_blank" class="social-btn round"><i class="fa-brands fa-tiktok"></i></a>
+                    </div>
+                    <div id="rp-ren" class="rp-card" style="display:none;">
+                        <div class="rp-image-box"><img id="rp-img-ren" class="rp-large" loading="lazy" decoding="async"><img id="rp-small-ren" class="rp-small" style="display:none;" loading="lazy" decoding="async"></div>
+                        <div class="rp-details"><div class="rp-name" id="rp-name-ren">Playing</div><div class="rp-state" id="rp-details-ren"></div><div class="rp-time" id="rp-state-ren"></div></div>
+                    </div>
+                </div>
+            </div>
+            <div class="section-title"><i class="fa-solid fa-star"></i> Projects</div><div class="grid" id="ren-grid"></div>
+            <div class="section-title"><i class="fa-solid fa-code"></i> Contributions</div><div class="grid" id="ren-contribs"></div>
+        </div>
+
+        <div id="m1" class="page m1-theme">
+            <img src="" class="profile-banner" id="banner-m1" loading="lazy" decoding="async">
+            <div class="profile-header">
+                <div class="pfp-box">
+                    <img src="" class="pfp-img" loading="lazy" decoding="async">
+                    <div class="status-badge" id="status-m1"></div>
+                </div>
+                <div class="user-info">
+                    <h1>M1</h1>
+                    <div class="stats-col">
+                        <span class="stat-item title-badge">Co-Founder</span>
+                        <span class="stat-item">90M+ Visits Contributed</span>
+                    </div>
+                    <div class="socials-row">
+                        <a href="https://www.roblox.com/users/1465279888/profile" target="_blank" class="social-btn round"><i class="fa-solid fa-gamepad"></i></a>
+                        <a href="https://discord.com/users/1108751350906490891" target="_blank" class="social-btn round"><i class="fa-brands fa-discord"></i></a>
+                    </div>
+                    <div id="rp-m1" class="rp-card" style="display:none;">
+                        <div class="rp-image-box"><img id="rp-img-m1" class="rp-large" loading="lazy" decoding="async"><img id="rp-small-m1" class="rp-small" style="display:none;" loading="lazy" decoding="async"></div>
+                        <div class="rp-details"><div class="rp-name" id="rp-name-m1">Playing</div><div class="rp-state" id="rp-details-m1"></div><div class="rp-time" id="rp-state-m1"></div></div>
+                    </div>
+                </div>
+            </div>
+            <div class="section-title"><i class="fa-solid fa-star"></i> Projects</div><div class="grid" id="m1-grid"></div>
+            <div class="section-title"><i class="fa-solid fa-code"></i> Contributions</div><div class="grid" id="m1-contribs"></div>
+        </div>
+
+        <div id="k" class="page k-theme">
+            <img src="" class="profile-banner" id="banner-k" loading="lazy" decoding="async">
+            <div class="profile-header">
+                <div class="pfp-box">
+                    <img src="" class="pfp-img" loading="lazy" decoding="async">
+                    <div class="status-badge" id="status-k"></div>
+                </div>
+                <div class="user-info">
+                    <h1>K</h1>
+                    <div class="stats-col">
+                        <span class="stat-item title-badge">Team</span>
+                        <span class="stat-item">Supporting Founder</span>
+                    </div>
+                    <div class="socials-row">
+                        <a href="https://www.roblox.com/users/444448274/profile" target="_blank" class="social-btn round"><i class="fa-solid fa-gamepad"></i></a>
+                        <a href="https://discord.com/users/763509084640378951" target="_blank" class="social-btn round"><i class="fa-brands fa-discord"></i></a>
+                    </div>
+                    <div id="rp-k" class="rp-card" style="display:none;">
+                        <div class="rp-image-box"><img id="rp-img-k" class="rp-large" loading="lazy" decoding="async"><img id="rp-small-k" class="rp-small" style="display:none;" loading="lazy" decoding="async"></div>
+                        <div class="rp-details"><div class="rp-name" id="rp-name-k">Playing</div><div class="rp-state" id="rp-details-k"></div><div class="rp-time" id="rp-state-k"></div></div>
+                    </div>
+                </div>
+            </div>
+            <div class="section-title"><i class="fa-solid fa-star"></i> Projects</div><div class="grid" id="k-grid"></div>
+            <div class="section-title"><i class="fa-solid fa-code"></i> Contributions</div><div class="grid" id="k-contribs"></div>
+        </div>
+
+        <div id="zero" class="page zero-theme">
+            <img src="" class="profile-banner" id="banner-zero" loading="lazy" decoding="async">
+            <div class="profile-header">
+                <div class="pfp-box">
+                    <img src="" class="pfp-img" loading="lazy" decoding="async">
+                    <div class="status-badge" id="status-zero"></div>
+                </div>
+                <div class="user-info">
+                    <h1>Zero</h1>
+                    <div class="stats-col">
+                        <span class="stat-item title-badge">Manager</span>
+                    </div>
+                    <div class="socials-row">
+                        <a href="https://www.roblox.com/users/276369609/profile" target="_blank" class="social-btn round"><i class="fa-solid fa-gamepad"></i></a>
+                        <a href="https://discord.com/users/787335998404689941" target="_blank" class="social-btn round"><i class="fa-brands fa-discord"></i></a>
+                    </div>
+                    <div id="rp-zero" class="rp-card" style="display:none;">
+                        <div class="rp-image-box"><img id="rp-img-zero" class="rp-large" loading="lazy" decoding="async"><img id="rp-small-zero" class="rp-small" style="display:none;" loading="lazy" decoding="async"></div>
+                        <div class="rp-details"><div class="rp-name" id="rp-name-zero">Playing</div><div class="rp-state" id="rp-details-zero"></div><div class="rp-time" id="rp-state-zero"></div></div>
+                    </div>
+                </div>
+            </div>
+            <div class="section-title"><i class="fa-solid fa-star"></i> Projects</div><div class="grid" id="zero-grid"></div>
+            <div class="section-title"><i class="fa-solid fa-code"></i> Contributions</div><div class="grid" id="zero-contribs"></div>
+        </div>
+
+        <div id="eli" class="page eli-theme">
+            <img src="" class="profile-banner" id="banner-eli" loading="lazy" decoding="async">
+            <div class="profile-header">
+                <div class="pfp-box">
+                    <img src="" class="pfp-img" loading="lazy" decoding="async">
+                    <div class="status-badge" id="status-eli"></div>
+                </div>
+                <div class="user-info">
+                    <h1>Eli</h1>
+                    <div class="stats-col">
+                        <span class="stat-item">Supporting</span>
+                    </div>
+                    <div class="socials-row">
+                        <a href="https://www.roblox.com/users/3376062580/profile" target="_blank" class="social-btn round"><i class="fa-solid fa-gamepad"></i></a>
+                        <a href="https://discord.com/users/963116717213626479" target="_blank" class="social-btn round"><i class="fa-brands fa-discord"></i></a>
+                        <a href="https://www.tiktok.com/@f4keeli" target="_blank" class="social-btn round"><i class="fa-brands fa-tiktok"></i></a>
+                    </div>
+                    <div id="rp-eli" class="rp-card" style="display:none;">
+                        <div class="rp-image-box"><img id="rp-img-eli" class="rp-large" loading="lazy" decoding="async"><img id="rp-small-eli" class="rp-small" style="display:none;" loading="lazy" decoding="async"></div>
+                        <div class="rp-details"><div class="rp-name" id="rp-name-eli">Playing</div><div class="rp-state" id="rp-details-eli"></div><div class="rp-time" id="rp-state-eli"></div></div>
+                    </div>
+                </div>
+            </div>
+            <div class="section-title"><i class="fa-solid fa-star"></i> Projects</div><div class="grid" id="eli-grid"></div>
+            <div class="section-title"><i class="fa-solid fa-code"></i> Contributions</div><div class="grid" id="eli-contribs"></div>
+        </div>
+
+        <div id="aizen" class="page aizen-theme">
+            <img src="" class="profile-banner" id="banner-aizen" loading="lazy" decoding="async">
+            <div class="profile-header">
+                <div class="pfp-box">
+                    <img src="" class="pfp-img" loading="lazy" decoding="async">
+                    <div class="status-badge" id="status-aizen"></div>
+                </div>
+                <div class="user-info">
+                    <h1>Aizen</h1>
+                    <div class="stats-col">
+                        <span class="stat-item">Team</span>
+                    </div>
+                    <div class="socials-row">
+                        <a href="https://www.roblox.com/users/7302511003/profile" target="_blank" class="social-btn round"><i class="fa-solid fa-gamepad"></i></a>
+                        <a href="https://discord.com/users/1326320004215472158" target="_blank" class="social-btn round"><i class="fa-brands fa-discord"></i></a>
+                        <a href="https://www.youtube.com/@aizen.sym0" target="_blank" class="social-btn round"><i class="fa-brands fa-youtube"></i></a>
+                        <a href="https://www.tiktok.com/@aizen.sym7" target="_blank" class="social-btn round"><i class="fa-brands fa-tiktok"></i></a>
+                    </div>
+                    <div id="rp-aizen" class="rp-card" style="display:none;">
+                        <div class="rp-image-box"><img id="rp-img-aizen" class="rp-large" loading="lazy" decoding="async"><img id="rp-small-aizen" class="rp-small" style="display:none;" loading="lazy" decoding="async"></div>
+                        <div class="rp-details"><div class="rp-name" id="rp-name-aizen">Playing</div><div class="rp-state" id="rp-details-aizen"></div><div class="rp-time" id="rp-state-aizen"></div></div>
+                    </div>
+                </div>
+            </div>
+            <div class="section-title"><i class="fa-solid fa-star"></i> Projects</div><div class="grid" id="aizen-grid"></div>
+            <div class="section-title"><i class="fa-solid fa-code"></i> Contributions</div><div class="grid" id="aizen-contribs"></div>
+        </div>
+
+        <div id="lummy" class="page lummy-theme">
+            <img src="" class="profile-banner" id="banner-lummy" loading="lazy" decoding="async">
+            <div class="profile-header">
+                <div class="pfp-box">
+                    <img src="" class="pfp-img" loading="lazy" decoding="async">
+                    <div class="status-badge" id="status-lummy"></div>
+                </div>
+                <div class="user-info">
+                    <h1>LummY</h1>
+                    <div class="stats-col">
+                        <span class="stat-item">VFX Artist</span>
+                    </div>
+                    <div class="socials-row">
+                        <a href="https://www.roblox.com/users/3428847568/profile" target="_blank" class="social-btn round"><i class="fa-solid fa-gamepad"></i></a>
+                        <a href="https://discord.com/users/913122767061274684" target="_blank" class="social-btn round"><i class="fa-brands fa-discord"></i></a>
+                    </div>
+                    <div id="rp-lummy" class="rp-card" style="display:none;">
+                        <div class="rp-image-box"><img id="rp-img-lummy" class="rp-large" loading="lazy" decoding="async"><img id="rp-small-lummy" class="rp-small" style="display:none;" loading="lazy" decoding="async"></div>
+                        <div class="rp-details"><div class="rp-name" id="rp-name-lummy">Playing</div><div class="rp-state" id="rp-details-lummy"></div><div class="rp-time" id="rp-state-lummy"></div></div>
+                    </div>
+                </div>
+            </div>
+            <div class="section-title"><i class="fa-solid fa-star"></i> Projects</div><div class="grid" id="lummy-grid"></div>
+            <div class="section-title"><i class="fa-solid fa-code"></i> Contributions</div><div class="grid" id="lummy-contribs"></div>
+        </div>
+
+        <div id="sleepy" class="page sleepy-theme">
+            <img src="" class="profile-banner" id="banner-sleepy" loading="lazy" decoding="async">
+            <div class="profile-header">
+                <div class="pfp-box">
+                    <img src="" class="pfp-img" loading="lazy" decoding="async">
+                    <div class="status-badge" id="status-sleepy"></div>
+                </div>
+                <div class="user-info">
+                    <h1>Sleepy</h1>
+                    <div class="stats-col">
+                        <span class="stat-item">Map Designer</span>
+                    </div>
+                    <div class="socials-row">
+                        <a href="https://www.roblox.com/users/1374985814/profile" target="_blank" class="social-btn round"><i class="fa-solid fa-gamepad"></i></a>
+                        <a href="https://discord.com/users/956186165726298113" target="_blank" class="social-btn round"><i class="fa-brands fa-discord"></i></a>
+                    </div>
+                    <div id="rp-sleepy" class="rp-card" style="display:none;">
+                        <div class="rp-image-box"><img id="rp-img-sleepy" class="rp-large" loading="lazy" decoding="async"><img id="rp-small-sleepy" class="rp-small" style="display:none;" loading="lazy" decoding="async"></div>
+                        <div class="rp-details"><div class="rp-name" id="rp-name-sleepy">Playing</div><div class="rp-state" id="rp-details-sleepy"></div><div class="rp-time" id="rp-state-sleepy"></div></div>
+                    </div>
+                </div>
+            </div>
+            <div class="section-title"><i class="fa-solid fa-star"></i> Projects</div><div class="grid" id="sleepy-grid"></div>
+            <div class="section-title"><i class="fa-solid fa-code"></i> Contributions</div><div class="grid" id="sleepy-contribs"></div>
+        </div>
+
+        <div id="cazu" class="page cazu-theme">
+            <img src="" class="profile-banner" id="banner-cazu" loading="lazy" decoding="async">
+            <div class="profile-header">
+                <div class="pfp-box">
+                    <img src="" class="pfp-img" loading="lazy" decoding="async">
+                    <div class="status-badge" id="status-cazu"></div>
+                </div>
+                <div class="user-info">
+                    <h1>Cazu</h1>
+                    <div class="stats-col">
+                        <span class="stat-item">105.378M+ Visits Contributed</span>
+                        <span class="stat-item">Scripting / FX / Animating</span>
+                    </div>
+                    <div class="socials-row">
+                        <a href="https://www.roblox.com/users/639619931/profile" target="_blank" class="social-btn round"><i class="fa-solid fa-gamepad"></i></a>
+                        <a href="https://discord.com/users/1150126168289317034" target="_blank" class="social-btn round"><i class="fa-brands fa-discord"></i></a>
+                        <a href="https://discord.gg/g45uazf2" target="_blank" class="social-btn" style="background: rgba(88,101,242,0.2); border-color: #5865F2; color: #fff;"><i class="fa-brands fa-discord"></i> Active</a>
+                    </div>
+                    <div id="rp-cazu" class="rp-card" style="display:none;">
+                        <div class="rp-image-box"><img id="rp-img-cazu" class="rp-large" loading="lazy" decoding="async"><img id="rp-small-cazu" class="rp-small" style="display:none;" loading="lazy" decoding="async"></div>
+                        <div class="rp-details"><div class="rp-name" id="rp-name-cazu">Playing</div><div class="rp-state" id="rp-details-cazu"></div><div class="rp-time" id="rp-state-cazu"></div></div>
+                    </div>
+                </div>
+            </div>
+            <div class="section-title"><i class="fa-solid fa-star"></i> Projects</div><div class="grid" id="cazu-grid"></div>
+            <div class="section-title"><i class="fa-solid fa-code"></i> Contributions</div><div class="grid" id="cazu-contribs"></div>
+        </div>
+    </main>
+
+    <div class="modal" id="modal">
+        <div class="modal-container">
+            <div class="close-btn" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></div>
+            <div class="gallery-wrapper">
+                <div id="gallery-track"></div>
+                <div class="gallery-nav nav-left" onclick="slide(-1)"><i class="fa-solid fa-chevron-left"></i></div>
+                <div class="gallery-nav nav-right" onclick="slide(1)"><i class="fa-solid fa-chevron-right"></i></div>
+            </div>
+            <div class="game-header">
+                <img id="modal-icon" class="game-icon-main" loading="lazy" decoding="async">
+                <div class="game-details">
+                    <div class="game-title-lg" id="modal-title"></div>
+                    <div class="btn-group">
+                        <a href="#" target="_blank" class="btn-action btn-play" id="btn-play" style="display:none;">
+                            <i class="fa-solid fa-play"></i> Play Now
+                        </a>
+                        <a href="#" target="_blank" class="btn-action btn-discord" id="btn-discord" style="display:none;">
+                            <i class="fa-brands fa-discord"></i> Community
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const userIds = { 
+            ren: '718594927998533662', 
+            m1: '1108751350906490891', 
+            lummy: '913122767061274684', 
+            sleepy: '956186165726298113', 
+            cazu: '1150126168289317034',
+            k: '763509084640378951',
+            zero: '787335998404689941',
+            aizen: '1326320004215472158',
+            eli: '963116717213626479'
+        };
+
+        const defaultBanners = {
+            ren: "https://cdn.discordapp.com/banners/718594927998533662/f57aab91b53dcdfd32817e96572b5aa7.png?size=4096",
+            m1: "https://cdn.discordapp.com/banners/1108751350906490891/a_c1e5b8bdbcface609cbb22e5afc89347.gif?size=4096",
+            lummy: "https://cdn.discordapp.com/banners/913122767061274684/a_e90d9d8d5ec06896d7f76e6f47845416.gif?size=4096",
+            cazu: "https://cdn.discordapp.com/banners/1150126168289317034/dfeade3971f73f6bb943937deecf6591.png?size=4096",
+            sleepy: "https://media.discordapp.net/attachments/1467198563250471179/1467361073303650450/5cd9d696b514ddb1236729c0ee6d889b.png?ex=69816b7e&is=698019fe&hm=f83702e2ae84e4c412bf9981662ae58c9c4d57feb236d8fba40f8ade35e2b80f&=&format=webp&quality=lossless",
+            k: "https://media.discordapp.net/attachments/1453547166336286771/1467400537203933387/Rintarro_okabe.png?ex=6981903f&is=69803ebf&hm=7329576c39eca99247c477b4a706f9fc8af4fd36726ccac8ad1b6ab5107e6a28&=&format=webp&quality=lossless&width=1872&height=749",
+            zero: "https://images-ext-1.discordapp.net/external/xRvzkawBo6Z4A_VSj313IzUJubFD7ES9C96uxJozmFw/%3Fsize%3D4096/https/cdn.discordapp.com/banners/787335998404689941/a_f499069a8608be943f4d56f329eac0da.gif",
+            aizen: "https://media.discordapp.net/attachments/1447606476578230306/1467447535160266772/77E042D5-4402-456F-B72E-246F5477F137.gif?ex=69806a84&is=697f1904&hm=ba1e7f18ab50c8d99e6835ce40a4b087c94e2be93ec6ec0aa1ef9bb170742c53&=",
+            eli: "https://cdn.discordapp.com/attachments/1456331351858090236/1467515681800060928/a_d916e0bf7d62d6b11ea0d3df8a126868.gif?ex=698152bb&is=6980013b&hm=db538f3ccc1eedf26cf5c7c91c7b870457c4ab742e34e23e5133cee8ca59427e&"
+        };
+
+        const themeColors = {
+            ren: '56, 189, 248',
+            m1: '239, 68, 68',
+            lummy: '59, 130, 246',
+            sleepy: '30, 58, 138',
+            cazu: '127, 29, 29',
+            k: '147, 51, 234',
+            zero: '229, 229, 229',
+            aizen: '147, 51, 234',
+            eli: '100, 210, 255',
+            home: '255, 255, 255'
+        };
+
+        const songs = {
+            ren: { title: "Mama's Boy", artist: "Dominic Fike", url: "https://cdn.discordapp.com/attachments/886450143354843146/1467816596046221322/Dominic_Fike_-_Mamas_Boy_Official_Video_-_Dominic_Fike_720p_h264_youtube.mp4?ex=6981c23b&is=698070bb&hm=4d2d5082a4c5664e40a3748305f6339c70ddbce4c2b0c53728179564050a8edb&" },
+            m1: { title: "Asphyxia", artist: "Cö shu Nie", url: "https://cdn.discordapp.com/attachments/886450143354843146/1467816312792285265/Co_shu_Nie_-_Asphyxia_-_coshunieVEVO_720p_h264_youtube.mp4?ex=6981c1f7&is=69807077&hm=0a0bfa1bdb0a202224dfdd93015236461280fb3da195756d52e7fe9b8935d49d&" },
+            home: { title: "Home", artist: "Jacal", url: "https://cdn.discordapp.com/attachments/1453547166336286771/1467811620838441081/when_a_guitar_riff_hits_you_so_hard_that_you_start_to_tear_up_full_version_-_jacal_720p_h264_youtube.mp4?ex=6981bd99&is=69806c19&hm=64de1c650f6860f9e35cd4de38d2e55b396b12bc6d32a56eb466f27568721f70&" }, 
+            lummy: { title: "Jane", artist: "The Long Faces", url: "https://cdn.discordapp.com/attachments/886450143354843146/1467816146630873088/Jane_-_The_Long_Faces_720p_h264_youtube.mp4?ex=6981c1d0&is=69807050&hm=1a1cec82d03143b4c7532c330e356246f2b0a524ac7a87971019675def075438&" },
+            sleepy: { title: "Picasso", artist: "Werenoi", url: "https://cdn.discordapp.com/attachments/886450143354843146/1467816285483307101/Werenoi_-_Picasso_Visualizer_-_Werenoi_1080p_h264_youtube.mp4?ex=6981c1f1&is=69807071&hm=1ee5e389e03b64b78aae16f40d52b5710cf7f28e6e23f5111fa9c78a91162cb7&" },
+            cazu: { title: "Homesick", artist: "Wave to Earth", url: "https://cdn.discordapp.com/attachments/886450143354843146/1467816042725245070/wave_to_earth_-_homesick_Official_Lyric_Video_-_wave_to_earth_720p_h264_youtube.mp4?ex=6981c1b7&is=69807037&hm=9641ca8714a65ebf41aaf21388ad7408b975e9450d6f83b6cbdc461648c8977f&" },
+            aizen: { title: "Golden Brown", artist: "The Stranglers", url: "https://cdn.discordapp.com/attachments/886450143354843146/1467957396897792173/The_Stranglers_-_Golden_Brown_-_stranglersofficial_480p_h264_youtube.mp4?ex=6982455c&is=6980f3dc&hm=f61f047aec2bd2378b23f1d9dcfa58366a0efa8b4a22c063d5ff5264e7240f69&", start: 166 },
+            eli: { title: "The Honored One", artist: "Gojo Satoru", url: "https://cdn.discordapp.com/attachments/886450143354843146/1467803396189982720/Gojo_Satoru_-_The_Honored_One_Jujutsu_Kaisen_Season_2_OST_-_Normaneverland_720p_h264_youtube.mp4?ex=6981b5f0&is=69806470&hm=a597268c8ed9a38d9a01c1b7b824bc9f51d5885ae7d2aec28289b51bbe41bc1f&" }
+        };
+
+        let partners = [
+            { name: "Open Slot" },
+            { name: "Open Slot" }
+        ];
+        let partnerText = "Want to collaborate? DM the <span class=\"p-highlight\">Manager</span> or any of the <span class=\"p-highlight\">@Arata Founders</span> inside our Discord.";
+
+        const zeroSongs = [
+            { title: "Weakest VS Strongest", artist: "Academy City", url: "https://cdn.discordapp.com/attachments/1453951035877097554/1467465347899592756/A_Certain_Scientific_Railgun_S_OST_2_Weakest_VS_Strongest_-_Kakine_Teitoku_720p_h264_youtube.mp4?ex=69807b1b&is=697f299b&hm=37746d62ca12d4735cc6b33f48adbdac65e93f56bf422628d14fafc82a23dd28&" },
+            { title: "ROAR", artist: "Official", url: "https://cdn.discordapp.com/attachments/1453951035877097554/1467466366289449106/ROAROfficial_MV_-_Official_YouTube_Channel_720p_h264_youtube.mp4?ex=6981cd8d&is=69807c0d&hm=806dd4a80c9512f1e5c19f67f6e6e02c95467b7320e18132f011288e3e6e7766&" }
+        ];
+
+        const kSongs = [
+            { title: "Town, Flow of Time, People", artist: "Clannad", url: "https://cdn.discordapp.com/attachments/1453547166336286771/1467972001393279036/Clannad_-_Town_Flow_of_Time_People_-_Ben_Booze_480p_h264_youtube.mp4?ex=698252f6&is=69810176&hm=cfffaa08a65d1884d596723efd5446a20d931b7909a821ed03f36d888e19ab28&" },
+            { title: "GATE OF STEINER", artist: "Steins;Gate", url: "https://cdn.discordapp.com/attachments/1453547166336286771/1467972002185871573/GATE_OF_STEINER_-Piano-_-_Takeshi_Abo_720p_h264_youtube.mp4?ex=698252f6&is=69810176&hm=70d3bf41e94439e013d1fdcfe147a9e0f07480600e4e436f6bbb08afa6d451ad&" },
+            { title: "Chainsaw Man - Trailer OST", artist: "Official", url: "https://cdn.discordapp.com/attachments/886450143354843146/1467950529664651354/Chainsaw_Man_-_Trailer_OST_Extended_-_Sacha_720p_h264_youtube.mp4?ex=69823ef7&is=6980ed77&hm=1e8c81d1521442f01c14b51a9d63210490439533a2debcde7b0e2f9a3c3e9acc&", start: 50 }
+        ];
+
+        const kRare = { title: "TALAHON-GHOUL", artist: "Joseph Stakoz Yoresh", url: "https://cdn.discordapp.com/attachments/1453547166336286771/1467972003137851637/TALAHON-GHOUL_Episode_1.mp4?ex=698252f7&is=69810177&hm=53563ade7d4359bac4bd3d00344f3ac589b8419de859444e74dc6c865a27582f&" };
+
+        const arataData = {
+            title: "ARATA", play: "https://www.roblox.com/games/98861725687885/ARATA", discord: "https://discord.gg/arata",
+            icon: "https://tr.rbxcdn.com/180DAY-d75f77620b864da3f780ab6d7cd5bc99/512/512/Image/Webp/noFilter",
+            banner: "https://tr.rbxcdn.com/180DAY-c572f7a41fbbce4aa4895ca088dc3e7b/768/432/Image/Webp/noFilter",
+            images: ["https://tr.rbxcdn.com/180DAY-c572f7a41fbbce4aa4895ca088dc3e7b/768/432/Image/Webp/noFilter", "https://tr.rbxcdn.com/180DAY-d75f77620b864da3f780ab6d7cd5bc99/512/512/Image/Webp/noFilter"]
+        };
+
+        const rikudoData = {
+            title: "Rikudo", discord: "https://discord.gg/NnPuGDfzhE",
+            icon: "https://media.discordapp.net/attachments/1463646731672621139/1467387058971476058/itachi_fx2.png?ex=698183b1&is=69803231&hm=69357db026dda519d7b8b093727a95f71a9d2debe0228e9185f670c6d9056b90&=&format=webp&quality=lossless",
+            banner: "https://media.discordapp.net/attachments/1463646731672621139/1467387161556029522/bgrik3.png?ex=698183ca&is=6980324a&hm=5f642c88d0f1e9f089282f9337e3932ef5ffdd8c1e23b88e16f55f56f2391f0e&=&format=webp&quality=lossless&width=1768&height=743",
+            images: [
+                "https://media.discordapp.net/attachments/1463646731672621139/1467387161556029522/bgrik3.png?ex=698183ca&is=6980324a&hm=5f642c88d0f1e9f089282f9337e3932ef5ffdd8c1e23b88e16f55f56f2391f0e&=&format=webp&quality=lossless&width=1768&height=743",
+                "https://media.discordapp.net/attachments/1463646731672621139/1467387162076119043/bgrik2.png?ex=698183ca&is=6980324a&hm=4f868eca1282a87eeb898721a00a9586c7067778d149713c0ae38e6e5c7588e7&=&format=webp&quality=lossless&width=1768&height=783",
+                "https://media.discordapp.net/attachments/1463646731672621139/1467387162474320118/bgrik1.png?ex=698183ca&is=6980324a&hm=76c11d029b5ea28f9c4e7bbea39ef9063858c004063687f709488e813b899175&=&format=webp&quality=lossless",
+                "https://media.discordapp.net/attachments/1463646731672621139/1467387058971476058/itachi_fx2.png?ex=698183b1&is=69803231&hm=69357db026dda519d7b8b093727a95f71a9d2debe0228e9185f670c6d9056b90&=&format=webp&quality=lossless"
+            ]
+        };
+        
+        const strikaData = { 
+            title: "STRIKA", discord: "https://discord.gg/Strika", 
+            icon: "https://media.discordapp.net/attachments/1453228131384299622/1467294050284605440/image.png?ex=69812d12&is=697fdb92&hm=abb213cfddf07e41ef6193f87fb2b2bf587d7a4844f0793fb30631c096c24fe0&=&format=webp&quality=lossless", 
+            banner: "https://cdn.discordapp.com/attachments/886450143354843146/1467815730438340805/image.png?ex=6981c16c&is=69806fec&hm=34128865f98827326b617a8f6a3078d82ef3e5aa772535006d517ba5d52f3d1b&", 
+            images: ["https://cdn.discordapp.com/attachments/886450143354843146/1467815730438340805/image.png?ex=6981c16c&is=69806fec&hm=34128865f98827326b617a8f6a3078d82ef3e5aa772535006d517ba5d52f3d1b&"] 
+        };
+
+        const ghoulReData = {
+             title: "GHOUL://RE", play: "https://www.roblox.com/games/72368345999613/UPDATE-1-GHOUL-RE", discord: "https://discord.gg/Ghoulre",
+             icon: "https://tr.rbxcdn.com/180DAY-b5d2f7c66f875e79153ce71bd0f2d41c/512/512/Image/Webp/noFilter",
+             banner: "https://tr.rbxcdn.com/180DAY-b69fa88c434a4ed80493c4170ae98658/768/432/Image/Webp/noFilter",
+             images: ["https://tr.rbxcdn.com/180DAY-b5d2f7c66f875e79153ce71bd0f2d41c/512/512/Image/Webp/noFilter", "https://tr.rbxcdn.com/180DAY-b69fa88c434a4ed80493c4170ae98658/768/432/Image/Webp/noFilter"]
+        };
+        
+        const jumpSdData = { 
+            title: "Jump Showdown", play: "https://www.roblox.com/games/18519254033/Jump-Showdown", discord: "https://discord.gg/jumpshowdown", 
+            icon: "https://tr.rbxcdn.com/180DAY-0da76d8e5f4abe1b5cb53cab155cd6dd/512/512/Image/Webp/noFilter", 
+            banner: "https://tr.rbxcdn.com/180DAY-5cf1b02f96a60ca2d6745992d61bdb49/768/432/Image/Webp/noFilter", 
+            images: ["https://tr.rbxcdn.com/180DAY-5cf1b02f96a60ca2d6745992d61bdb49/768/432/Image/Webp/noFilter"] 
+        };
+        
+        const autData = { 
+            title: "A Universal Time", play: "https://www.roblox.com/games/5130598377/A-Universal-Time-5-5", discord: "https://discord.gg/AUT",
+            icon: "https://tr.rbxcdn.com/180DAY-2771841b21abe987bf2a90ae9025d94a/512/512/Image/Webp/noFilter", 
+            banner: "https://tr.rbxcdn.com/180DAY-343a5f100b4a4347992ec374cafd6ae2/768/432/Image/Webp/noFilter", 
+            images: ["https://tr.rbxcdn.com/180DAY-343a5f100b4a4347992ec374cafd6ae2/768/432/Image/Webp/noFilter"]
+        };
+        
+        const geniusData = { 
+            title: "Genius", discord: "https://discord.gg/genius", 
+            icon: "https://media.discordapp.net/attachments/1453228131384299622/1467293965639225415/image.png?ex=69812cfe&is=697fdb7e&hm=f8a5e1846393427aec2b991ed8853711804c8ac228aa8cc05933505cc59c4b77&=&format=webp&quality=lossless", 
+            banner: "https://cdn.discordapp.com/attachments/886450143354843146/1467815564536975444/image.png?ex=6981c145&is=69806fc5&hm=f4e11ab1def931a45e6fd2ff035c72ad59057ef9ac011c972ce0fe317ef5bc93&", 
+            images: ["https://cdn.discordapp.com/attachments/886450143354843146/1467815564536975444/image.png?ex=6981c145&is=69806fc5&hm=f4e11ab1def931a45e6fd2ff035c72ad59057ef9ac011c972ce0fe317ef5bc93&"] 
+        };
+
+        const database = {
+            ren: {
+                main: [
+                    arataData,
+                    rikudoData,
+                    strikaData,
+                    { title: "Soulless CC", discord: "https://discord.gg/soullesscc", icon: "placeholder", banner: "placeholder", images: ["placeholder"] }
+                ],
+                contribs: [
+                    geniusData,
+                    jumpSdData,
+                    { title: "YBA: Rebooted", play: "https://www.roblox.com/games/103554327580977/YBA-Rebooted-Adventure", discord: "https://discord.gg/VKKJU2pCer", icon: "https://tr.rbxcdn.com/180DAY-cf04f9771863cd50bc9ae62eefe993a4/512/512/Image/Webp/noFilter", banner: "https://tr.rbxcdn.com/180DAY-b0e0cce963003d9d6027452fc35b72b6/768/432/Image/Webp/noFilter", images: ["https://tr.rbxcdn.com/180DAY-b0e0cce963003d9d6027452fc35b72b6/768/432/Image/Webp/noFilter"] }
+                ]
+            },
+            m1: {
+                main: [ arataData ],
+                contribs: [
+                      ghoulReData,
+                    { title: "YBA: Rebooted", play: "https://www.roblox.com/games/103554327580977/YBA-Rebooted-Adventure", discord: "https://discord.gg/VKKJU2pCer", icon: "https://tr.rbxcdn.com/180DAY-cf04f9771863cd50bc9ae62eefe993a4/512/512/Image/Webp/noFilter", banner: "https://tr.rbxcdn.com/180DAY-b0e0cce963003d9d6027452fc35b72b6/768/432/Image/Webp/noFilter", images: ["https://tr.rbxcdn.com/180DAY-b0e0cce963003d9d6027452fc35b72b6/768/432/Image/Webp/noFilter"] },
+                    { title: "GHOUL://RE Battlegrounds", play: "https://www.roblox.com/games/129909509070340/GHOUL-BATTLEGROUNDS", discord: "https://discord.gg/8tJnyynwJz", icon: "https://tr.rbxcdn.com/180DAY-138e94f720bc0b0c87a09655cc65f83e/512/512/Image/Webp/noFilter", banner: "https://tr.rbxcdn.com/180DAY-09cd2b2d376dc399d98463b9721d0c82/768/432/Image/Webp/noFilter", images: ["https://tr.rbxcdn.com/180DAY-09cd2b2d376dc399d98463b9721d0c82/768/432/Image/Webp/noFilter"] }
+                ]
+            },
+            k: {
+                main: [ arataData ],
+                contribs: []
+            },
+            zero: {
+                main: [ arataData ],
+                contribs: []
+            },
+            lummy: {
+                main: [ arataData ],
+                contribs: []
+            },
+            sleepy: {
+                main: [ arataData ],
+                contribs: []
+            },
+            cazu: {
+                main: [ arataData, rikudoData ],
+                contribs: [
+                    ghoulReData,
+                    { 
+                        title: "Shonen Online 2", play: "https://www.roblox.com/games/12912318979/Shonen-Online-2", 
+                        icon: "https://i.ytimg.com/vi/86HjWqqE4TE/hq720.jpg?sqp=-oaymwEXCK4FEIIDSFryq4qpAwkIARUAAIhCGAE=&rs=AOn4CLBr3x6TyVoBmP9umHIb4gzxDLaWJw", 
+                        banner: "https://images-ext-1.discordapp.net/external/xkYT1GQTvG9HoSO-T483XboTXl7pk9xbWNhkWGRhLoo/https/tr.rbxcdn.com/180DAY-995216ee379436208c6db7c3637a479c/500/280/Image/Jpeg/noFilter?format=webp",
+                        images: ["https://images-ext-1.discordapp.net/external/xkYT1GQTvG9HoSO-T483XboTXl7pk9xbWNhkWGRhLoo/https/tr.rbxcdn.com/180DAY-995216ee379436208c6db7c3637a479c/500/280/Image/Jpeg/noFilter?format=webp"]
+                    },
+                    {
+                        title: "Agent Academy", play: "https://www.roblox.com/games/6499612650/Agent-Academy",
+                        icon: "https://images-ext-1.discordapp.net/external/MklMEhQI4UgWZu5fIQxF5Ibkw4ArkVK6mfVPQP74-Z8/https/tr.rbxcdn.com/180DAY-bce3db24d624de712b94e516e4c64100/500/280/Image/Jpeg/noFilter?format=webp",
+                        banner: "https://images-ext-1.discordapp.net/external/MklMEhQI4UgWZu5fIQxF5Ibkw4ArkVK6mfVPQP74-Z8/https/tr.rbxcdn.com/180DAY-bce3db24d624de712b94e516e4c64100/500/280/Image/Jpeg/noFilter?format=webp",
+                        images: ["https://images-ext-1.discordapp.net/external/MklMEhQI4UgWZu5fIQxF5Ibkw4ArkVK6mfVPQP74-Z8/https/tr.rbxcdn.com/180DAY-bce3db24d624de712b94e516e4c64100/500/280/Image/Jpeg/noFilter?format=webp"]
+                    },
+                    {
+                        title: "Attack on Sin 2",
+                        icon: "https://images-ext-1.discordapp.net/external/NujBBofqGNougskP2z5WWB5zxw2wzx94-GN-Ct90l0M/https/tr.rbxcdn.com/180DAY-2229ead1c29a533e5356209b399abf2d/500/280/Image/Jpeg/noFilter?format=webp",
+                        banner: "https://images-ext-1.discordapp.net/external/NujBBofqGNougskP2z5WWB5zxw2wzx94-GN-Ct90l0M/https/tr.rbxcdn.com/180DAY-2229ead1c29a533e5356209b399abf2d/500/280/Image/Jpeg/noFilter?format=webp",
+                        images: ["https://images-ext-1.discordapp.net/external/NujBBofqGNougskP2z5WWB5zxw2wzx94-GN-Ct90l0M/https/tr.rbxcdn.com/180DAY-2229ead1c29a533e5356209b399abf2d/500/280/Image/Jpeg/noFilter?format=webp"]
+                    }
+                ]
+            },
+            aizen: {
+                main: [ arataData ],
+                contribs: [ autData ]
+            },
+            eli: {
+                main: [
+                    strikaData,
+                    { title: "Strikers Reborn", discord: "https://discord.gg/StrikersReborn", icon: "placeholder", banner: "placeholder", images: ["placeholder"] },
+                    { title: "Ninja Destiny", discord: "https://discord.gg/NinjaDestiny", icon: "placeholder", banner: "placeholder", images: ["placeholder"] },
+                    { title: "Veyth", discord: "https://discord.gg/veyth", icon: "placeholder", banner: "placeholder", images: ["placeholder"] },
+                    { title: "Slayers Zero", discord: "https://discord.gg/2gjqkCB2mr", icon: "placeholder", banner: "placeholder", images: ["placeholder"] }
+                ],
+                contribs: [
+                    jumpSdData,
+                    autData,
+                    ghoulReData,
+                    { title: "Ninjitsu Master", discord: "https://discord.gg/ninjitsu-master-of-elements-1071522754370748558", icon: "placeholder", banner: "placeholder", images: ["placeholder"] },
+                    { title: "Duskborn", discord: "https://discord.gg/h9eRzstazA", icon: "placeholder", banner: "placeholder", images: ["placeholder"] },
+                    { title: "Ends of The Earth", discord: "https://discord.gg/BWgcqRpZJF", icon: "placeholder", banner: "placeholder", images: ["placeholder"] },
+                    { title: "Classic Battlegrounds", discord: "https://discord.gg/vkA2mnm32J", icon: "placeholder", banner: "placeholder", images: ["placeholder"] }
+                ]
+            }
+        };
+
+        const featuredConfig = [
+            { key: "arata", data: arataData, status: "Released", genre: "Combat", desc: "Flagship world of intense combat and immersive storytelling.", placeId: 98861725687885 },
+            { key: "rikudo", data: rikudoData, status: "WIP", genre: "Action", desc: "Stylized combat experience currently in development.", placeId: null }
+        ];
+
+        const creatorsData = [
+            { key: "ren", name: "Ren", role: "Founder", roleTag: "@Arata Founder", handle: "@ren", img: "https://cdn.discordapp.com/embed/avatars/0.png", profile: "https://www.roblox.com/users/4885165670/profile" },
+            { key: "m1", name: "M1", role: "Co-Founder", roleTag: "@Arata Founder", handle: "@m1", img: "https://cdn.discordapp.com/embed/avatars/1.png", profile: "https://www.roblox.com/users/1465279888/profile" },
+            { key: "zero", name: "Zero", role: "Manager", roleTag: "@Arata Manager", handle: "@zero", img: "https://cdn.discordapp.com/embed/avatars/2.png", profile: "https://www.roblox.com/users/276369609/profile" },
+            { key: "k", name: "K", role: "Founder", roleTag: "@Arata Founder", handle: "@k", img: "https://cdn.discordapp.com/embed/avatars/3.png", profile: "https://www.roblox.com/users/444448274/profile" }
+        ];
+
+        let currentTheme = 'home';
+        let userInteracted = false;
+        let pendingPlay = false;
+        let currentSrc = "";
+
+        function getTag(item) {
+            if(item.play && item.discord) return "ROBLOX & DISCORD";
+            if(item.play) return "ROBLOX";
+            return "DISCORD";
+        }
+
+        function renderPartners() {
+            const grid = document.getElementById("partner-grid");
+            const pText = document.getElementById("partner-text");
+            if(grid) {
+                const list = (partners && partners.length) ? partners : [{ name: "Open Slot" }];
+                grid.innerHTML = list.map(p => `<div class="partner-card">${p.name || "Open Slot"}</div>`).join("");
+            }
+            if(pText) pText.innerHTML = partnerText;
+        }
+
+        function renderFeatured() {
+            const row = document.getElementById("featured-row");
+            if (!row) return;
+            row.innerHTML = featuredConfig.map(item => {
+                const game = item.data;
+                const isWip = !game.play;
+                const href = isWip ? "#" : game.play;
+                const badge = isWip ? "WIP" : item.status;
+                const placeId = item.placeId || "";
+                return `
+                <div class="featured-card ${isWip ? 'is-wip' : ''}" data-place-id="${placeId}">
+                    <a href="${href}" ${isWip ? "onclick=\"return false;\"" : "target=\"_blank\""} class="featured-link">
+                        <img src="${game.banner}" alt="${game.title}" loading="lazy" decoding="async">
+                        <div class="featured-body">
+                            <div class="featured-badges">
+                                <span class="featured-badge">${badge}</span>
+                                <span class="featured-badge">${item.genre}</span>
+                            </div>
+                            <div class="featured-name">${game.title}</div>
+                            <div class="featured-desc">${item.desc}</div>
+                            <div class="featured-stats">
+                                <div class="stat-pill stat-visits">Visits ${isWip ? "WIP" : "—"}</div>
+                                <div class="stat-pill stat-favorites">Favorites ${isWip ? "WIP" : "—"}</div>
+                                <div class="stat-pill live stat-playing">${isWip ? "WIP" : "Playing —"}</div>
+                            </div>
+                        </div>
+                    </a>
+                </div>`;
+            }).join("");
+        }
+
+        function renderCreators() {
+            const grid = document.getElementById("creators-grid");
+            if (!grid) return;
+            grid.innerHTML = creatorsData.map(c => `
+                <a class="creator-card" href="${c.profile}" target="_blank" rel="noopener">
+                    <div class="creator-avatar-wrap">
+                        <img class="creator-avatar" data-creator-key="${c.key}" src="${c.img}" alt="${c.name}" loading="lazy" decoding="async">
+                    </div>
+                    <div class="creator-overlay">
+                        <div class="creator-role-tag">${c.roleTag || c.role}</div>
+                        <div class="creator-role">${c.role}</div>
+                        <div class="creator-name">${c.name}</div>
+                        <div class="creator-handle" data-discord-handle="${c.key}">${c.handle}</div>
+                    </div>
+                </a>
+            `).join("");
+        }
+
+        function renderDuplicates() {
+            const dupGrid = document.getElementById("dup-grid");
+            if (!dupGrid) return;
+            const byTitle = new Map();
+            const displayNames = {
+                ren: "Ren",
+                m1: "M1",
+                k: "K",
+                zero: "Zero",
+                lummy: "LummY",
+                sleepy: "Sleepy",
+                cazu: "Cazu",
+                aizen: "Aizen",
+                eli: "Eli"
+            };
+            Object.keys(database).forEach(key => {
+                database[key].contribs.forEach(item => {
+                    if (!byTitle.has(item.title)) byTitle.set(item.title, new Set());
+                    byTitle.get(item.title).add(displayNames[key] || key);
+                });
+            });
+            const duplicates = [];
+            byTitle.forEach((owners, title) => {
+                if (owners.size > 1) duplicates.push({ title, owners: Array.from(owners) });
+            });
+            if (duplicates.length === 0) {
+                dupGrid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; color: #6b7280; padding: 16px;">No duplicate projects yet</div>';
+                return;
+            }
+            dupGrid.innerHTML = duplicates.map(d => {
+                const pills = d.owners.map(o => `<span class="dup-pill">${o}</span>`).join("");
+                return `<div class="dup-card"><div class="dup-title">${d.title}</div><div class="dup-meta">${pills}</div></div>`;
+            }).join("");
+        }
+
+        async function updateFeaturedStats() {
+            const cards = Array.from(document.querySelectorAll(".featured-card"));
+            const placeIds = cards.map(c => c.getAttribute("data-place-id")).filter(Boolean);
+            if (placeIds.length === 0) return;
+            try {
+                const res = await fetch(`https://games.roblox.com/v1/games/multiget-place-details?placeIds=${placeIds.join(",")}`);
+                if (!res.ok) return;
+                const data = await res.json();
+                data.forEach(game => {
+                    const card = document.querySelector(`.featured-card[data-place-id="${game.placeId}"]`);
+                    if (!card) return;
+                    const visitsEl = card.querySelector(".stat-visits");
+                    const favEl = card.querySelector(".stat-favorites");
+                    const playingEl = card.querySelector(".stat-playing");
+                    if (visitsEl) visitsEl.textContent = `Visits ${game.visits.toLocaleString()}`;
+                    if (favEl) favEl.textContent = `Favorites ${game.favoritedCount.toLocaleString()}`;
+                    if (playingEl) playingEl.textContent = `Playing ${game.playing.toLocaleString()}`;
+                });
+            } catch (e) {
+                // keep placeholders if blocked
+            }
+        }
+
+        function scrollToSection(id) {
+            const target = document.getElementById(id);
+            if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+        
+        function generateDynamicArt(title, type) {
+            let hash = 0;
+            for (let i = 0; i < title.length; i++) {
+                hash = title.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const hue1 = Math.abs(hash % 360);
+            const hue2 = (hue1 + 40) % 360;
+            
+            const gradient = `linear-gradient(135deg, hsl(${hue1}, 70%, 15%), hsl(${hue2}, 70%, 10%))`;
+            
+            if (type === 'banner') {
+                return `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='800' height='450'><rect width='100%' height='100%' fill='black'/><rect width='100%' height='100%' fill='${encodeURIComponent(gradient)}'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='monospace' font-weight='bold' font-size='40' fill='rgba(255,255,255,0.15)'>${encodeURIComponent(title)}</text></svg>`;
+            } else {
+                return `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><rect width='100%' height='100%' fill='black'/><rect width='100%' height='100%' fill='${encodeURIComponent(gradient)}'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='monospace' font-weight='bold' font-size='60' fill='rgba(255,255,255,0.3)'>${title.charAt(0)}</text></svg>`;
+            }
+        }
+
+        function render(id, list) {
+            const el = document.getElementById(id);
+            if(!el) return;
+            if(list.length === 0) { el.innerHTML = '<div style="grid-column: 1/-1; text-align:center; color: #555; padding: 20px;">No entries yet</div>'; return; }
+            
+            el.innerHTML = list.map((item, i) => {
+                let displayBanner = item.banner;
+                if(displayBanner === 'placeholder') {
+                    displayBanner = generateDynamicArt(item.title, 'banner');
+                    item.banner = displayBanner;
+                    item.icon = generateDynamicArt(item.title, 'icon');
+                    item.images = [displayBanner];
+                }
+                
+                return `
+                <div class="card" onclick="openModal('${id}', ${i})">
+                    <img src="${displayBanner}" class="card-bg" loading="lazy" decoding="async">
+                    <div class="card-overlay">
+                        <span class="card-tag">${getTag(item)}</span>
+                        <div class="card-title">${item.title}</div>
+                    </div>
+                </div>
+            `}).join('');
+        }
+        
+        Object.keys(database).forEach(key => {
+            render(`${key}-grid`, database[key].main);
+            render(`${key}-contribs`, database[key].contribs);
+        });
+        renderPartners();
+        renderFeatured();
+        renderCreators();
+        renderDuplicates();
+        updateFeaturedStats();
+
+        function updateHomeStats() {
+            const allProjects = new Map();
+            const allContribs = new Map();
+
+            Object.keys(database).forEach(key => {
+                database[key].main.forEach((p, idx) => {
+                    if(!allProjects.has(p.title)) allProjects.set(p.title, { user: key, idx: idx, data: p });
+                });
+                database[key].contribs.forEach((c, idx) => {
+                    if(!allContribs.has(c.title)) allContribs.set(c.title, { user: key, idx: idx, data: c });
+                });
+            });
+
+            const duplicatesCount = (() => {
+                const byTitle = new Map();
+                Object.keys(database).forEach(key => {
+                    database[key].contribs.forEach(item => {
+                        if (!byTitle.has(item.title)) byTitle.set(item.title, new Set());
+                        byTitle.get(item.title).add(key);
+                    });
+                });
+                let count = 0;
+                byTitle.forEach(owners => { if (owners.size > 1) count += 1; });
+                return count;
+            })();
+
+            const dirStat = document.getElementById('stats-directory');
+            if (dirStat) {
+                const total = allProjects.size + allContribs.size + duplicatesCount;
+                dirStat.innerHTML = `${total} <i class="fa-solid fa-chevron-right h-arrow"></i>`;
+            }
+
+            const dirList = document.getElementById('dd-directory');
+            if (dirList) {
+                let dHtml = '<div class="dd-group"><div class="dd-title">Sections</div>';
+                dHtml += `<div class="dd-item link" onclick="scrollToSection('featured')">Featured <span class="dd-chevron">›</span></div>`;
+                dHtml += `<div class="dd-item link" onclick="scrollToSection('creators')">Creators <span class="dd-chevron">›</span></div>`;
+                dHtml += `<div class="dd-item link" onclick="scrollToSection('duplicates')">Duplicates <span class="dd-chevron">›</span></div>`;
+                dHtml += `<div class="dd-item link" onclick="scrollToSection('partners')">Partners <span class="dd-chevron">›</span></div>`;
+                dHtml += '</div>';
+
+                dHtml += '<div class="dd-group"><div class="dd-title">Projects</div>';
+                allProjects.forEach((val, title) => {
+                    dHtml += `<div class="dd-item" onclick="openDDLink('${val.user}', 'main', ${val.idx})">${title}</div>`;
+                });
+                dHtml += '</div>';
+
+                dHtml += '<div class="dd-group"><div class="dd-title">Contributions</div>';
+                allContribs.forEach((val, title) => {
+                    dHtml += `<div class="dd-item" onclick="openDDLink('${val.user}', 'contribs', ${val.idx})">${title}</div>`;
+                });
+                dHtml += '</div>';
+
+                dHtml += '<div class="dd-group"><div class="dd-title">Supporting</div>';
+                dHtml += `<div class="dd-item" onclick="tab('k')">K</div>`;
+                dHtml += `<div class="dd-item" onclick="tab('zero')">Zero</div>`;
+                dHtml += `<div class="dd-item" onclick="tab('eli')">Eli</div>`;
+                dHtml += `<div class="dd-item" onclick="tab('aizen')">Aizen</div>`;
+                dHtml += `<div class="dd-item" onclick="tab('lummy')">LummY</div>`;
+                dHtml += `<div class="dd-item" onclick="tab('sleepy')">Sleepy</div>`;
+                dHtml += `<div class="dd-item" onclick="tab('cazu')">Cazu</div>`;
+                dHtml += '</div>';
+
+                dirList.innerHTML = dHtml;
+            }
+        }
+        function openDDLink(u, type, i) {
+            tab(u); 
+            openModal(u + '-' + (type === 'main' ? 'grid' : 'contribs'), i);
+        }
+        updateHomeStats();
+
+        const directoryStat = document.getElementById('directory-stat');
+        const featuredSection = document.getElementById('featured');
+        if (directoryStat) {
+            directoryStat.addEventListener('click', (e) => {
+                e.stopPropagation();
+                directoryStat.classList.toggle('open');
+                if (featuredSection) {
+                    featuredSection.classList.toggle('directory-shift', directoryStat.classList.contains('open'));
+                }
+            });
+            document.addEventListener('click', () => {
+                directoryStat.classList.remove('open');
+                if (featuredSection) featuredSection.classList.remove('directory-shift');
+            });
+            const dirList = document.getElementById('dd-directory');
+            if (dirList) {
+                dirList.addEventListener('click', () => {
+                    directoryStat.classList.remove('open');
+                    if (featuredSection) featuredSection.classList.remove('directory-shift');
+                });
+            }
+        }
+
+        let trailColor = '255, 255, 255';
+
+        const vid = document.getElementById('mini-video');
+        const slider = document.getElementById('seek-slider');
+        const volSlider = document.getElementById('vol-slider');
+        const ui = document.getElementById('player-ui');
+        
+        const unmuteOnInteraction = () => {
+            if(vid.muted) {
+                vid.muted = false;
+                vid.volume = 0.5; 
+                volSlider.value = 0.5;
+                volSlider.style.background = `linear-gradient(to right, #fff 50%, rgba(255,255,255,0.1) 50%)`;
+            }
+            userInteracted = true;
+            if(pendingPlay) safePlay();
+            document.body.removeEventListener('click', unmuteOnInteraction);
+            document.body.removeEventListener('keydown', unmuteOnInteraction);
+            document.body.removeEventListener('touchstart', unmuteOnInteraction);
+        };
+        document.body.addEventListener('click', unmuteOnInteraction);
+        document.body.addEventListener('keydown', unmuteOnInteraction);
+        document.body.addEventListener('touchstart', unmuteOnInteraction);
+
+        function tab(t) {
+            currentTheme = t; 
+            document.querySelectorAll('.page').forEach(e => e.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(e => e.classList.remove('active'));
+            document.getElementById(t).classList.add('active');
+            
+            const btn = document.getElementById(`nav-${t}`);
+            if(btn) btn.classList.add('active');
+            else if (t === 'home') document.querySelectorAll('.nav-btn')[0].classList.add('active');
+            
+            trailColor = themeColors[t] || '255, 255, 255';
+            document.documentElement.style.setProperty('--current-accent', `rgb(${trailColor})`);
+            
+            const overlay = document.getElementById('colorOverlay');
+            if(t !== 'home') {
+                overlay.style.background = `radial-gradient(circle at center, rgba(${trailColor}, 0.12) 0%, rgba(5,5,5,0.92) 100%)`;
+            } else {
+                overlay.style.background = '#050505';
+            }
+
+            if(t === 'zero') {
+                 const randSong = zeroSongs[Math.floor(Math.random() * zeroSongs.length)];
+                 switchSong(t, randSong);
+            } else if (t === 'k') {
+                 if(Math.random() < 0.05) {
+                     switchSong(t, kRare);
+                 } else {
+                     const randSong = kSongs[Math.floor(Math.random() * kSongs.length)];
+                     switchSong(t, randSong);
+                 }
+            } else if(songs[t]) {
+                 switchSong(t, songs[t]);
+            }
+        }
+
+        function setPlayerState(isPlaying) {
+            document.getElementById('play-icon').className = isPlaying ? "fa-solid fa-pause" : "fa-solid fa-play";
+            ui.classList.toggle('playing', isPlaying);
+        }
+
+        function safePlay() {
+            const playPromise = vid.play();
+            if (playPromise !== undefined && typeof playPromise.then === "function") {
+                playPromise.then(() => {
+                    pendingPlay = false;
+                    setPlayerState(true);
+                }).catch(() => {
+                    pendingPlay = true;
+                    setPlayerState(false);
+                });
+            }
+        }
+
+        function switchSong(key, specificSong) {
+            const s = specificSong || songs[key];
+            if(s && s.url) {
+                document.getElementById('track-title').innerText = s.title;
+                document.getElementById('track-artist').innerText = s.artist;
+                
+                if(currentSrc !== s.url) {
+                    currentSrc = s.url;
+                    vid.src = s.url;
+                    vid.load();
+                    
+                    vid.onloadedmetadata = function() {
+                        if(s.start) vid.currentTime = s.start;
+                    };
+                }
+                safePlay();
+            }
+        }
+        function toggleVideo() {
+            if(vid.paused) { 
+                safePlay(); 
+            } else { 
+                vid.pause(); 
+                setPlayerState(false);
+            }
+        }
+        
+        vid.addEventListener('ended', () => {
+            if(currentTheme === 'aizen') {
+                vid.currentTime = 166;
+                safePlay();
+            } else {
+                vid.currentTime = 0;
+                safePlay();
+            }
+        });
+        vid.addEventListener('canplay', () => {
+            if(pendingPlay && userInteracted) safePlay();
+        });
+        vid.addEventListener('error', () => {
+            setPlayerState(false);
+        });
+
+        vid.addEventListener('timeupdate', () => {
+            if(vid.duration) {
+                const pct = (vid.currentTime / vid.duration) * 100;
+                const accent = document.documentElement.style.getPropertyValue('--current-accent').trim() || 'rgb(255,255,255)';
+                slider.style.background = `linear-gradient(to right, ${accent} ${pct}%, #333 ${pct}%)`;
+                slider.value = pct;
+                document.getElementById('curr-time').innerText = fmt(vid.currentTime);
+                document.getElementById('dur-time').innerText = fmt(vid.duration);
+
+                if(vid.currentTime >= vid.duration - 0.4) {
+                    if(currentTheme === 'aizen') {
+                        vid.currentTime = 166;
+                    } else {
+                        vid.currentTime = 0;
+                    }
+                    vid.play();
+                }
+            }
+        });
+        slider.addEventListener('input', () => { vid.currentTime = (slider.value / 100) * vid.duration; });
+        volSlider.addEventListener('input', () => { 
+            vid.volume = volSlider.value; 
+            vid.muted = false; 
+            const pct = volSlider.value * 100;
+            volSlider.style.background = `linear-gradient(to right, #fff ${pct}%, rgba(255,255,255,0.1) ${pct}%)`;
+        });
+        volSlider.style.background = `linear-gradient(to right, #fff 50%, rgba(255,255,255,0.1) 50%)`;
+        function fmt(s) { if(isNaN(s)) return "0:00"; const m=Math.floor(s/60), sc=Math.floor(s%60); return `${m}:${sc<10?'0'+sc:sc}`; }
+
+        async function updateStatus() {
+            for(const [key, id] of Object.entries(userIds)) {
+                try {
+                    const res = await fetch(`https://api.lanyard.rest/v1/users/${id}`);
+                    const data = await res.json();
+                    if(data.success) {
+                        const d = data.data;
+
+                        const badge = document.getElementById(`status-${key}`);
+                        if(badge) {
+                            badge.className = `status-badge status-${d.discord_status}`;
+                            if(d.discord_status === 'dnd') badge.innerHTML = '<i class="fa-solid fa-minus" style="color: #fff; font-size: 14px;"></i>';
+                            else if(d.discord_status === 'idle') badge.innerHTML = '<i class="fa-solid fa-moon" style="color: #fff; font-size: 12px; transform: rotate(-15deg);"></i>';
+                            else if(d.discord_status === 'offline') badge.innerHTML = '<i class="fa-solid fa-circle-dot" style="color: #333; font-size: 14px;"></i>';
+                            else badge.innerHTML = ''; 
+                        }
+
+                        let pfpUrl;
+                        if (key === 'aizen') {
+                             pfpUrl = "https://images-ext-1.discordapp.net/external/Oo6syIWjoDRyQryhxyl30O7VS5TOCSAKzowgx-kAU8w/%3Fsize%3D512/https/cdn.discordapp.com/avatars/1326320004215472158/02c032438399fb79d7e9d5d4df41957c.png?format=webp&quality=lossless";
+                        } else if (d.discord_user.avatar) {
+                            pfpUrl = `https://cdn.discordapp.com/avatars/${d.discord_user.id}/${d.discord_user.avatar}.png?size=512`;
+                        }
+                        if(!pfpUrl) pfpUrl = "https://cdn.discordapp.com/embed/avatars/0.png";
+
+                        const pfpEl = document.querySelector(`#${key} .pfp-img`);
+                        if(pfpEl && pfpUrl && pfpEl.src !== pfpUrl) {
+                            pfpEl.src = pfpUrl;
+                        }
+
+                        const creatorImg = document.querySelector(`.creator-avatar[data-creator-key="${key}"]`);
+                        if (creatorImg && pfpUrl && creatorImg.src !== pfpUrl) {
+                            creatorImg.src = pfpUrl;
+                        }
+
+                        const bannerEl = document.getElementById(`banner-${key}`);
+                        if(bannerEl) {
+                            if(d.discord_user.banner) {
+                                const ext = d.discord_user.banner.startsWith("a_") ? "gif" : "png";
+                                const bUrl = `https://cdn.discordapp.com/banners/${d.discord_user.id}/${d.discord_user.banner}.${ext}?size=4096`;
+                                if(!bannerEl.src.includes(d.discord_user.banner)) bannerEl.src = bUrl;
+                            } else {
+                                if(!bannerEl.src.includes("discordapp") && !bannerEl.src.includes(defaultBanners[key])) {
+                                    bannerEl.src = defaultBanners[key];
+                                }
+                                if(!d.discord_user.banner && defaultBanners[key] && !bannerEl.src.includes(defaultBanners[key].substring(0,20))) {
+                                    bannerEl.src = defaultBanners[key];
+                                }
+                            }
+                        }
+
+                        const navBtnImg = document.querySelector(`#nav-${key} img`);
+                        if(navBtnImg && pfpUrl && navBtnImg.src !== pfpUrl && (key === 'zero' || key === 'aizen')) {
+                             navBtnImg.src = pfpUrl;
+                        } else if(navBtnImg && d.discord_user.avatar && key !== 'zero' && key !== 'aizen') {
+                             const nUrl = `https://cdn.discordapp.com/avatars/${d.discord_user.id}/${d.discord_user.avatar}.png?size=128`;
+                             if(navBtnImg.src !== nUrl) navBtnImg.src = nUrl;
+                        }
+
+                        const handleEl = document.querySelector(`.creator-handle[data-discord-handle="${key}"]`);
+                        if (handleEl && d.discord_user?.username) {
+                            const uname = d.discord_user.username;
+                            const desired = `@${uname}`;
+                            if (handleEl.textContent !== desired) handleEl.textContent = desired;
+                        }
+
+                        const game = d.activities.find(a => a.type === 0); 
+                        const rpCard = document.getElementById(`rp-${key}`);
+                        if(rpCard) {
+                            if(game) {
+                                rpCard.style.display = 'inline-flex';
+                                document.getElementById(`rp-name-${key}`).innerText = game.name;
+                                document.getElementById(`rp-details-${key}`).innerText = game.details || "";
+                                document.getElementById(`rp-state-${key}`).innerText = game.state || "";
+                                const imgEl = document.getElementById(`rp-img-${key}`);
+                                if(game.assets?.large_image) {
+                                    let url = game.assets.large_image.startsWith("mp:") 
+                                        ? `https://media.discordapp.net/${game.assets.large_image.replace("mp:", "")}` 
+                                        : `https://cdn.discordapp.com/app-assets/${game.application_id}/${game.assets.large_image}.png`;
+                                    imgEl.src = url;
+                                } else { imgEl.src = "https://placehold.co/64/222/fff?text=?"; }
+                            } else { rpCard.style.display = 'none'; }
+                        }
+                    }
+                } catch(e){}
+            }
+        }
+        setInterval(updateStatus, 15000); updateStatus();
+
+        let imgs = [], idx = 0;
+        function openModal(listId, i) {
+            const u = listId.split('-')[0];
+            const cat = listId.includes('grid') ? 'main' : 'contribs';
+            const d = database[u][cat][i];
+            
+            document.getElementById('modal-title').innerText = d.title;
+            document.getElementById('modal-icon').src = d.icon;
+            
+            const p = document.getElementById('btn-play'), di = document.getElementById('btn-discord');
+            if(d.play) { p.style.display='inline-flex'; p.href=d.play; p.innerHTML=`<i class="fa-solid fa-play"></i> Play Now`; } else p.style.display='none';
+            if(d.discord) { di.style.display='inline-flex'; di.href=d.discord; di.innerHTML=`<i class="fa-brands fa-discord"></i> Community`; } else di.style.display='none';
+
+            imgs = d.images || [d.banner]; idx = 0; updateGal();
+            document.getElementById('modal').classList.add('open');
+        }
+        function updateGal() {
+            document.getElementById('gallery-track').innerHTML = imgs.map((src, i) => `<img src="${src}" class="gallery-img ${i === idx ? 'active' : ''}" loading="lazy" decoding="async">`).join('');
+        }
+        function slide(d) { idx = (idx + d + imgs.length) % imgs.length; updateGal(); }
+        function closeModal() { document.getElementById('modal').classList.remove('open'); }
+        tab('home');
+
+        window.addEventListener('load', () => {
+            document.body.classList.remove('loading');
+        });
+
+        const topBar = document.querySelector('.top-bar');
+        const topToggle = document.getElementById('topbar-toggle');
+        let topHidden = false;
+        if (topToggle && topBar) {
+            topToggle.addEventListener('click', () => {
+                topHidden = !topHidden;
+                topBar.classList.toggle('is-hidden', topHidden);
+            });
+        }
+        window.addEventListener('scroll', () => {
+            if (!topBar) return;
+            const shouldCompact = window.scrollY > 40;
+            topBar.classList.toggle('is-compact', shouldCompact);
+        });
+
+        const applyForm = document.getElementById('apply-form');
+        const applyStatus = document.getElementById('apply-status');
+        const APPLY_ENDPOINT = "/apply";
+        if (applyForm) {
+            applyForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                applyStatus.textContent = "Sending application...";
+                try {
+                    const formData = new FormData(applyForm);
+                    const res = await fetch(APPLY_ENDPOINT, {
+                        method: "POST",
+                        body: formData
+                    });
+                    const data = await res.json().catch(() => ({}));
+                    if (res.ok && data.ok) {
+                        applyStatus.textContent = "Application sent! We'll review it soon.";
+                        applyForm.reset();
+                    } else {
+                        applyStatus.textContent = data.error || "Failed to submit application.";
+                    }
+                } catch (err) {
+                    applyStatus.textContent = "Failed to submit application.";
+                }
+            });
+        }
+
+        // 3D Tilting Effect Logic
+        document.querySelectorAll('.card, .pfp-box, .game-icon-main, .mp-content').forEach(el => {
+            el.addEventListener('mousemove', e => {
+                const rect = el.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                
+                const rotateX = ((y - centerY) / centerY) * -5;
+                const rotateY = ((x - centerX) / centerX) * 5;
+
+                el.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
+            });
+
+            el.addEventListener('mouseleave', () => {
+                el.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) scale(1)';
+            });
+        });
+    </script>
+</body>
+</html>
