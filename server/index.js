@@ -73,7 +73,9 @@ const containsBadWords = (text) => {
 };
 
 const isValidEmail = (email) => {
-  return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email);
+  if (!email || typeof email !== "string") return false;
+  const e = email.trim();
+  return e.includes("@") && e.includes(".") && e.length >= 6;
 };
 
 const s3Client = (S3_ENDPOINT && S3_BUCKET && S3_ACCESS_KEY && S3_SECRET_KEY)
