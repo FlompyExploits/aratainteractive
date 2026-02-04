@@ -2,7 +2,7 @@ import express from "express";
 import multer from "multer";
 import axios from "axios";
 import dotenv from "dotenv";
-import { Client, GatewayIntentBits, Partials } from "discord.js";
+import { Client, GatewayIntentBits, Partials, ChannelType } from "discord.js";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import fs from "fs";
 import path from "path";
@@ -27,6 +27,39 @@ const {
   S3_SECRET_KEY,
   S3_PUBLIC_BASE
 } = process.env;
+
+const TEAM_SERVER_ID = "1467936384525406332";
+const DEV_ROLE_ID = "1468017823585538237";
+
+const positionRoleMap = new Map([
+  ["scripter", "1468017643662344253"],
+  ["vfx", "1468017710821802040"],
+  ["sfx", "1468017740853018827"],
+  ["modeler", "1468017772264030271"],
+  ["animator", "1468018032831107245"],
+  ["gui artist", "1468018100312997952"],
+  ["gui", "1468018100312997952"]
+]);
+
+const normalizePosition = (pos) => (pos || "").toLowerCase().trim();
+
+const createTeamInvite = async (client) => {
+  const guild = await client.guilds.fetch(TEAM_SERVER_ID);
+  const channel =
+    guild.systemChannel ||
+    guild.channels.cache.find((c) => c.type === ChannelType.GuildText) ||
+    (await guild.channels.fetch()).find((c) => c?.type === ChannelType.GuildText);
+
+  if (!channel) throw new Error("No text channel available for invite");
+
+  const invite = await channel.createInvite({
+    maxUses: 1,
+    unique: true,
+    maxAge: 7 * 24 * 60 * 60
+  });
+
+  return invite?.url;
+};
 
 const app = express();
 app.use(express.json());
@@ -191,7 +224,10 @@ app.post("/apply", upload.single("resume"), async (req, res) => {
         discord_username,
         discord_id,
         position,
-        resumeUrl
+        resumeUrl,
+        status: "pending",
+        inviteUrl: null,
+        invitedAt: null
       };
       saveApplications(apps);
     }
@@ -248,17 +284,62 @@ client.on("messageReactionAdd", async (reaction, user) => {
 
     const dmUser = await client.users.fetch(appData.discord_id);
     if (emoji === "✅") {
-      await dmUser.send(
-        `You have been accepted to Arata Interactive!\n` +
-        `Team Server: https://discord.gg/vuXt5JUh\n` +
-        `Portfolio Server: https://discord.gg/PzJ5cFwt\n` +
+      appData.status = "accepted";
+      appData.invitedAt = Date.now();
+
+      const posNorm = normalizePosition(appData.position);
+      let inviteUrl = null;
+      if (posNorm !== "tester") {
+        try {
+          inviteUrl = await createTeamInvite(client);
+          appData.inviteUrl = inviteUrl;
+        } catch (inviteErr) {
+          console.error("Invite creation failed:", inviteErr?.message || inviteErr);
+        }
+      }
+      apps[reaction.message.id] = appData;
+      saveApplications(apps);
+
+      const lines = [
+        "You have been accepted to Arata Interactive!",
+        inviteUrl ? `Team Server: ${inviteUrl}` : "Team Server invite: (unavailable)",
+        "Portfolio Server: https://discord.gg/PzJ5cFwt",
         `Happy to have you here as a ${appData.position}!`
-      );
+      ];
+      await dmUser.send(lines.join("\n"));
     } else if (emoji === "❌") {
+      appData.status = "denied";
+      apps[reaction.message.id] = appData;
+      saveApplications(apps);
       await dmUser.send("Sorry, you've been denied :(");
     }
   } catch (e) {
     console.error(e);
+  }
+});
+
+client.on("guildMemberAdd", async (member) => {
+  try {
+    if (member.guild.id !== TEAM_SERVER_ID) return;
+    const apps = loadApplications();
+    const appEntry = Object.values(apps).find(
+      (a) => a.discord_id === member.id && a.status === "accepted"
+    );
+    if (!appEntry) return;
+
+    await member.roles.add(DEV_ROLE_ID).catch(() => {});
+    const roleId = positionRoleMap.get(normalizePosition(appEntry.position));
+    if (roleId) {
+      await member.roles.add(roleId).catch(() => {});
+    }
+
+    const welcome = `Welcome to Arata Int. <@${member.id}>! You have been roled: <@&${DEV_ROLE_ID}> and ${appEntry.position}.`;
+    const channel =
+      member.guild.systemChannel ||
+      member.guild.channels.cache.find((c) => c.type === ChannelType.GuildText);
+    if (channel) channel.send(welcome).catch(() => {});
+  } catch (e) {
+    console.error("guildMemberAdd error:", e?.message || e);
   }
 });
 
