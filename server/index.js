@@ -106,7 +106,16 @@ const uploadResume = async (file, applicantName) => {
 
 app.post("/apply", upload.single("resume"), async (req, res) => {
   try {
+    console.log("Apply received", {
+      origin: req.headers.origin,
+      hasFile: !!req.file,
+      fileName: req.file?.originalname,
+      fileType: req.file?.mimetype,
+      fileSize: req.file?.size
+    });
+
     if (!WEBHOOK_URL) {
+      console.error("Apply error: WEBHOOK_URL missing");
       return res.status(500).json({ ok: false, error: "Webhook not configured" });
     }
 
@@ -118,6 +127,15 @@ app.post("/apply", upload.single("resume"), async (req, res) => {
       position = "",
       message = ""
     } = req.body || {};
+
+    console.log("Apply body", {
+      name,
+      email,
+      discord_username,
+      discord_id,
+      position,
+      messageLength: (message || "").length
+    });
 
     if (!name || !email || !discord_username || !discord_id || !position || !message) {
       return res.status(400).json({ ok: false, error: "Missing required fields" });
@@ -133,7 +151,9 @@ app.post("/apply", upload.single("resume"), async (req, res) => {
     }
 
     const resumeUrl = await uploadResume(req.file, name);
+    console.log("Resume uploaded", { resumeUrl });
     if (!resumeUrl) {
+      console.error("Apply error: resume upload failed (S3 not configured?)");
       return res.status(500).json({ ok: false, error: "Resume storage not configured" });
     }
 
@@ -156,6 +176,7 @@ app.post("/apply", upload.single("resume"), async (req, res) => {
       content,
       embeds: [embed]
     });
+    console.log("Webhook sent", { status: response?.status, id: response?.data?.id });
 
     const msgId = response?.data?.id;
     if (msgId) {
@@ -173,6 +194,12 @@ app.post("/apply", upload.single("resume"), async (req, res) => {
 
     res.json({ ok: true });
   } catch (err) {
+    console.error("Apply failed", {
+      message: err?.message,
+      code: err?.code,
+      status: err?.response?.status,
+      data: err?.response?.data
+    });
     res.status(500).json({ ok: false, error: "Failed to send application" });
   }
 });
