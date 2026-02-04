@@ -92,7 +92,8 @@ const s3Client = (S3_ENDPOINT && S3_BUCKET && S3_ACCESS_KEY && S3_SECRET_KEY)
 const uploadResume = async (file, applicantName) => {
   if (!s3Client) return null;
   const safeName = applicantName.replace(/[^a-z0-9\\-_.]/gi, "_");
-  const key = `resumes/${Date.now()}_${safeName}_${file.originalname}`;
+  const safeOriginal = (file.originalname || "resume").replace(/\\s+/g, "_").replace(/[^a-z0-9\\-_.]/gi, "_");
+  const key = `resumes/${Date.now()}_${safeName}_${safeOriginal}`;
   const command = new PutObjectCommand({
     Bucket: S3_BUCKET,
     Key: key,
@@ -100,7 +101,7 @@ const uploadResume = async (file, applicantName) => {
     ContentType: file.mimetype
   });
   await s3Client.send(command);
-  if (S3_PUBLIC_BASE) return `${S3_PUBLIC_BASE}/${key}`;
+  if (S3_PUBLIC_BASE) return `${S3_PUBLIC_BASE}/${encodeURI(key)}`;
   return key;
 };
 
@@ -172,7 +173,7 @@ app.post("/apply", upload.single("resume"), async (req, res) => {
       footer: { text: `Applicant ID: ${discord_id}` }
     };
     if (req.file?.mimetype?.startsWith("image/")) {
-      embed.image = { url: resumeUrl };
+      embed.image = { url: encodeURI(resumeUrl) };
     }
 
     const response = await axios.post(`${WEBHOOK_URL}?wait=true`, {
