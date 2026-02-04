@@ -30,6 +30,7 @@ const {
 
 const TEAM_SERVER_ID = "1467936384525406332";
 const DEV_ROLE_ID = "1468017823585538237";
+const FAILURE_CHANNEL_ID = "1468144739391111260";
 
 const positionRoleMap = new Map([
   ["scripter", "1468017643662344253"],
@@ -59,6 +60,17 @@ const createTeamInvite = async (client) => {
   });
 
   return invite?.url;
+};
+
+const notifyFailure = async (client, text) => {
+  try {
+    const channel = await client.channels.fetch(FAILURE_CHANNEL_ID);
+    if (channel) {
+      await channel.send(text);
+    }
+  } catch (e) {
+    console.error("Failure notify error:", e?.message || e);
+  }
 };
 
 const app = express();
@@ -306,12 +318,26 @@ client.on("messageReactionAdd", async (reaction, user) => {
         "Portfolio Server: https://discord.gg/PzJ5cFwt",
         `Happy to have you here as a ${appData.position}!`
       ];
-      await dmUser.send(lines.join("\n"));
+      try {
+        await dmUser.send(lines.join("\n"));
+      } catch (dmErr) {
+        await notifyFailure(
+          client,
+          `DM failed for <@${appData.discord_id}> (Accepted). Invite: ${inviteUrl || "none"} | Position: ${appData.position}`
+        );
+      }
     } else if (emoji === "❌") {
       appData.status = "denied";
       apps[reaction.message.id] = appData;
       saveApplications(apps);
-      await dmUser.send("Sorry, you've been denied :(");
+      try {
+        await dmUser.send("Sorry, you've been denied :(");
+      } catch (dmErr) {
+        await notifyFailure(
+          client,
+          `DM failed for <@${appData.discord_id}> (Denied).`
+        );
+      }
     }
   } catch (e) {
     console.error(e);
