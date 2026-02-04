@@ -171,6 +171,9 @@ app.post("/apply", upload.single("resume"), async (req, res) => {
       ],
       footer: { text: `Applicant ID: ${discord_id}` }
     };
+    if (req.file?.mimetype?.startsWith("image/")) {
+      embed.image = { url: resumeUrl };
+    }
 
     const response = await axios.post(`${WEBHOOK_URL}?wait=true`, {
       content,
@@ -245,9 +248,9 @@ client.on("messageReactionAdd", async (reaction, user) => {
     const dmUser = await client.users.fetch(appData.discord_id);
     if (emoji === "✅") {
       await dmUser.send(
-        `You have been accepted to Arata Interactive!\\n` +
-        `Team Server: https://discord.gg/vuXt5JUh\\n` +
-        `Portfolio Server: https://discord.gg/PzJ5cFwt\\n` +
+        `You have been accepted to Arata Interactive!\n` +
+        `Team Server: https://discord.gg/vuXt5JUh\n` +
+        `Portfolio Server: https://discord.gg/PzJ5cFwt\n` +
         `Happy to have you here as a ${appData.position}!`
       );
     } else if (emoji === "❌") {
