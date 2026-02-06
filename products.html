@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARATA INTERACTIVE — Products</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0b0d14;
+            --panel: rgba(255,255,255,0.04);
+            --border: rgba(255,255,255,0.1);
+            --text: #e9edf1;
+            --muted: #9aa3ad;
+            --accent: #7dd3fc;
+            --ease: cubic-bezier(0.18, 0.98, 0.2, 1);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Sora', sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(900px 700px at 20% 15%, rgba(125, 211, 252, 0.12), transparent 60%),
+                radial-gradient(900px 700px at 80% 30%, rgba(147, 51, 234, 0.10), transparent 60%),
+                var(--bg);
+            min-height: 100vh;
+        }
+        .wrap {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 60px 24px 80px;
+        }
+        .top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 28px;
+        }
+        .brand {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            letter-spacing: 2px;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,0.06);
+            color: #fff;
+            text-decoration: none;
+            font-weight: 600;
+            transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease);
+        }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,0.35); }
+        h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: clamp(2rem, 5vw, 3rem);
+            margin-bottom: 8px;
+        }
+        p.lead { color: var(--muted); margin-bottom: 24px; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 22px;
+        }
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 22px;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.45);
+            transition: transform 0.25s var(--ease), box-shadow 0.3s var(--ease);
+        }
+        .card:hover { transform: translateY(-4px); box-shadow: 0 28px 70px rgba(0,0,0,0.6); }
+        .media { width: 100%; aspect-ratio: 16/9; background: #0a0c12; }
+        .media video { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .body { padding: 18px 20px 20px; }
+        .title { font-weight: 800; margin-bottom: 6px; font-size: 1.05rem; }
+        .meta { display: flex; gap: 10px; align-items: center; color: var(--muted); font-size: 0.85rem; margin-bottom: 12px; }
+        .price { color: #fff; font-weight: 800; }
+        .cta { display: flex; gap: 10px; flex-wrap: wrap; }
+        .cta .btn { padding: 10px 14px; border-radius: 12px; }
+        .note {
+            margin-top: 30px;
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+        .checkout {
+            margin-top: 36px;
+            padding: 22px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,0.03);
+            display: grid;
+            gap: 14px;
+        }
+        .checkout h2 { font-size: 1.1rem; }
+        .checkout .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+        #card-element {
+            background: #0f1320;
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 14px;
+            padding: 14px;
+            color: #fff;
+            min-height: 50px;
+            width: 100%;
+        }
+        .status { color: var(--muted); font-size: 0.9rem; }
+        .status.error { color: #ff7a7a; }
+        .status.success { color: #7dffb1; }
+        @media (max-width: 700px) {
+            .top { flex-direction: column; align-items: flex-start; gap: 12px; }
+        }
+    </style>
+    <script src="https://js.stripe.com/v3"></script>
+</head>
+<body>
+    <div class="wrap">
+        <div class="top">
+            <div class="brand">ARATA INTERACTIVE</div>
+            <a class="btn" href="index.html">Back to Home</a>
+        </div>
+        <h1>Products & Services</h1>
+        <p class="lead">Preview our animation packs. Purchase directly with card below.</p>
+
+        <div class="grid">
+            <div class="card">
+                <div class="media">
+                    <video src="https://cdn.discordapp.com/attachments/1456409796667510996/1469411367978274877/naoya.mp4?ex=69878f7a&is=69863dfa&hm=c0c67b320c12723c2813b32f78dccab6edad076f965eed3bbec19d09157e874d&" muted loop playsinline preload="metadata"></video>
+                </div>
+                <div class="body">
+                    <div class="title">Naoya</div>
+                    <div class="meta"><span class="price">$10</span><span>Animation</span></div>
+                    <div class="cta">
+                        <button class="btn buy-btn" data-product="naoya">Buy with Card</button>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="media">
+                    <video src="https://cdn.discordapp.com/attachments/1456409796667510996/1469411369106407668/lapse_blue.mp4?ex=69878f7a&is=69863dfa&hm=915bf9d90eed8233224e93a3dbee506ae2d48fb9d5b60eec222e0c0d08bec88d&" muted loop playsinline preload="metadata"></video>
+                </div>
+                <div class="body">
+                    <div class="title">Lapse Blue</div>
+                    <div class="meta"><span class="price">$10</span><span>Animation</span></div>
+                    <div class="cta">
+                        <button class="btn buy-btn" data-product="lapse">Buy with Card</button>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="media">
+                    <video src="https://cdn.discordapp.com/attachments/1456409796667510996/1469411370364829869/sukuna_domainn.mp4?ex=69878f7b&is=69863dfb&hm=2f08ee4b3b739feaf37adf487ef8d1fcd058879f8e3c82504257e576d8f4992b&" muted loop playsinline preload="metadata"></video>
+                </div>
+                <div class="body">
+                    <div class="title">Sukuna</div>
+                    <div class="meta"><span class="price">$15</span><span>Animation</span></div>
+                    <div class="cta">
+                        <button class="btn buy-btn" data-product="sukuna">Buy with Card</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="checkout" id="checkout">
+            <h2>Secure Checkout</h2>
+            <div class="row">
+                <div class="status" id="checkout-selected">Select a product above.</div>
+            </div>
+            <div id="card-element"></div>
+            <div class="row">
+                <button class="btn" id="pay-btn" disabled>Pay Now</button>
+                <span class="status" id="checkout-status"></span>
+            </div>
+        </div>
+
+        <div class="note">Need custom work? Use the contact page and include your budget, timeline, and reference links.</div>
+    </div>
+
+    <script>
+        const API_BASE = "https://aratainteractive.onrender.com";
+        let selectedProduct = null;
+        let stripe = null;
+        let card = null;
+
+        document.querySelectorAll('.media video').forEach(video => {
+            video.addEventListener('mouseenter', () => video.play().catch(() => {}));
+            video.addEventListener('mouseleave', () => video.pause());
+            video.addEventListener('touchstart', () => {
+                if (video.paused) video.play().catch(() => {});
+                else video.pause();
+            }, { passive: true });
+        });
+
+        const selectedEl = document.getElementById('checkout-selected');
+        const statusEl = document.getElementById('checkout-status');
+        const payBtn = document.getElementById('pay-btn');
+
+        const setStatus = (msg, type) => {
+            statusEl.textContent = msg || '';
+            statusEl.className = 'status' + (type ? ` ${type}` : '');
+        };
+
+        const initStripe = async () => {
+            if (stripe) return;
+            const cfgRes = await fetch(`${API_BASE}/stripe-config`);
+            const cfg = await cfgRes.json();
+            if (!cfg.ok) {
+                throw new Error('Stripe not configured');
+            }
+            stripe = Stripe(cfg.publishableKey);
+            const elements = stripe.elements();
+            card = elements.create('card', {
+                style: {
+                    base: {
+                        color: '#fff',
+                        fontFamily: 'Sora, sans-serif',
+                        fontSize: '16px',
+                        '::placeholder': { color: '#7b8794' }
+                    }
+                }
+            });
+            card.mount('#card-element');
+        };
+
+        document.querySelectorAll('.buy-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                selectedProduct = btn.dataset.product;
+                selectedEl.textContent = `Selected: ${selectedProduct}`;
+                payBtn.disabled = false;
+                setStatus('');
+                try {
+                    await initStripe();
+                } catch (e) {
+                    setStatus('Stripe not configured yet.', 'error');
+                }
+            });
+        });
+
+        payBtn.addEventListener('click', async () => {
+            if (!selectedProduct) return;
+            setStatus('Creating payment…');
+            try {
+                await initStripe();
+                const piRes = await fetch(`${API_BASE}/create-payment-intent`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ product: selectedProduct })
+                });
+                const pi = await piRes.json();
+                if (!pi.ok) throw new Error(pi.error || 'Payment failed');
+
+                const { error, paymentIntent } = await stripe.confirmCardPayment(pi.clientSecret, {
+                    payment_method: { card }
+                });
+                if (error) {
+                    setStatus(error.message || 'Payment failed', 'error');
+                    return;
+                }
+                if (paymentIntent && paymentIntent.status === 'succeeded') {
+                    setStatus('Payment received. We will contact you shortly.', 'success');
+                }
+            } catch (e) {
+                setStatus(e.message || 'Payment failed', 'error');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -2,7 +2,9 @@ import express from "express";
 import multer from "multer";
 import axios from "axios";
 import dotenv from "dotenv";
-import { Client, GatewayIntentBits, Partials, ChannelType } from "discord.js";
+import cors from "cors";
+import Stripe from "stripe";
+import { Client, GatewayIntentBits, Partials, REST, Routes } from "discord.js";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import fs from "fs";
 import path from "path";
@@ -15,11 +17,27 @@ const __dirname = path.dirname(__filename);
 
 const {
   PORT = 3000,
-  WEBHOOK_URL,
   DISCORD_BOT_TOKEN,
+  DISCORD_CLIENT_ID,
+  REGISTER_COMMANDS,
   FOUNDERS_ROLE_ID,
   MANAGERS_ROLE_ID,
   GUILD_ID,
+  APPLICATION_CHANNEL_ID,
+  TEAM_SERVER_ID,
+  DEV_ROLE_ID,
+  ROLE_SCRIPTER_ID,
+  ROLE_VFX_ID,
+  ROLE_SFX_ID,
+  ROLE_MODELER_ID,
+  ROLE_ANIMATOR_ID,
+  ROLE_GUI_ID,
+  STRIPE_SECRET_KEY,
+  STRIPE_PUBLISHABLE_KEY,
+  STRIPE_AMOUNT_NAOYA,
+  STRIPE_AMOUNT_LAPSE,
+  STRIPE_AMOUNT_SUKUNA,
+  ALLOWED_ORIGINS,
   S3_ENDPOINT,
   S3_REGION = "auto",
   S3_BUCKET,
@@ -28,71 +46,18 @@ const {
   S3_PUBLIC_BASE
 } = process.env;
 
-const TEAM_SERVER_ID = "1467936384525406332";
-const DEV_ROLE_ID = "1468017823585538237";
-const FAILURE_CHANNEL_ID = "1468144739391111260";
-
-const positionRoleMap = new Map([
-  ["scripter", "1468017643662344253"],
-  ["vfx", "1468017710821802040"],
-  ["sfx", "1468017740853018827"],
-  ["modeler", "1468017772264030271"],
-  ["animator", "1468018032831107245"],
-  ["gui artist", "1468018100312997952"],
-  ["gui", "1468018100312997952"]
-]);
-
-const normalizePosition = (pos) => (pos || "").toLowerCase().trim();
-
-const createTeamInvite = async (client) => {
-  const guild = await client.guilds.fetch(TEAM_SERVER_ID);
-  const channel =
-    guild.systemChannel ||
-    guild.channels.cache.find((c) => c.type === ChannelType.GuildText) ||
-    (await guild.channels.fetch()).find((c) => c?.type === ChannelType.GuildText);
-
-  if (!channel) throw new Error("No text channel available for invite");
-
-  const invite = await channel.createInvite({
-    maxUses: 1,
-    unique: true,
-    maxAge: 7 * 24 * 60 * 60
-  });
-
-  return invite?.url;
-};
-
-const notifyFailure = async (client, text) => {
-  try {
-    const channel = await client.channels.fetch(FAILURE_CHANNEL_ID);
-    if (channel) {
-      await channel.send(text);
-    }
-  } catch (e) {
-    console.error("Failure notify error:", e?.message || e);
-  }
-};
-
 const app = express();
+const allowedOrigins = (ALLOWED_ORIGINS || "https://arata.website").split(",").map((s) => s.trim()).filter(Boolean);
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true);
+    if (allowedOrigins.includes(origin)) return cb(null, true);
+    return cb(new Error("Not allowed by CORS"));
+  },
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
 app.use(express.json());
-const allowedOrigins = new Set([
-  "https://arata.website",
-  "https://www.arata.website"
-]);
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (origin && allowedOrigins.has(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-  }
-  res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  if (req.method === "OPTIONS") return res.sendStatus(204);
-  next();
-});
-
-app.get("/", (_req, res) => {
-  res.json({ ok: true, message: "Arata apply API is running" });
-});
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -118,9 +83,7 @@ const containsBadWords = (text) => {
 };
 
 const isValidEmail = (email) => {
-  if (!email || typeof email !== "string") return false;
-  const e = email.trim();
-  return e.includes("@") && e.includes(".") && e.length >= 6;
+  return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email);
 };
 
 const s3Client = (S3_ENDPOINT && S3_BUCKET && S3_ACCESS_KEY && S3_SECRET_KEY)
@@ -134,11 +97,45 @@ const s3Client = (S3_ENDPOINT && S3_BUCKET && S3_ACCESS_KEY && S3_SECRET_KEY)
     })
   : null;
 
+const TEAM_GUILD_ID = TEAM_SERVER_ID || "1467936384525406332";
+const DEV_ROLE = DEV_ROLE_ID || "1468017823585538237";
+const ROLE_MAP = {
+  Programmer: ROLE_SCRIPTER_ID || "1468017643662344253",
+  Scripter: ROLE_SCRIPTER_ID || "1468017643662344253",
+  VFX: ROLE_VFX_ID || "1468017710821802040",
+  SFX: ROLE_SFX_ID || "1468017740853018827",
+  Modeler: ROLE_MODELER_ID || "1468017772264030271",
+  Animator: ROLE_ANIMATOR_ID || "1468018032831107245",
+  "Gui Artist": ROLE_GUI_ID || "1468018100312997952",
+  "UI/UX": ROLE_GUI_ID || "1468018100312997952"
+};
+
+const invitesCache = new Map();
+let applicationChannel = null;
+
+const stripe = STRIPE_SECRET_KEY ? new Stripe(STRIPE_SECRET_KEY, { apiVersion: "2023-10-16" }) : null;
+const PRODUCT_PRICE_MAP = {
+  naoya: {
+    name: "Naoya Animation",
+    amount: Number(STRIPE_AMOUNT_NAOYA || 1000),
+    currency: "usd"
+  },
+  lapse: {
+    name: "Lapse Blue Animation",
+    amount: Number(STRIPE_AMOUNT_LAPSE || 1000),
+    currency: "usd"
+  },
+  sukuna: {
+    name: "Sukuna Domain Animation",
+    amount: Number(STRIPE_AMOUNT_SUKUNA || 1500),
+    currency: "usd"
+  }
+};
+
 const uploadResume = async (file, applicantName) => {
   if (!s3Client) return null;
   const safeName = applicantName.replace(/[^a-z0-9\\-_.]/gi, "_");
-  const safeOriginal = (file.originalname || "resume").replace(/\\s+/g, "_").replace(/[^a-z0-9\\-_.]/gi, "_");
-  const key = `resumes/${Date.now()}_${safeName}_${safeOriginal}`;
+  const key = `resumes/${Date.now()}_${safeName}_${file.originalname}`;
   const command = new PutObjectCommand({
     Bucket: S3_BUCKET,
     Key: key,
@@ -146,23 +143,28 @@ const uploadResume = async (file, applicantName) => {
     ContentType: file.mimetype
   });
   await s3Client.send(command);
-  if (S3_PUBLIC_BASE) return `${S3_PUBLIC_BASE}/${encodeURI(key)}`;
+  if (S3_PUBLIC_BASE) return `${S3_PUBLIC_BASE}/${key}`;
   return key;
+};
+
+const refreshInvitesCache = async () => {
+  try {
+    const guild = await client.guilds.fetch(TEAM_GUILD_ID);
+    const invites = await guild.invites.fetch();
+    invitesCache.clear();
+    invites.forEach((inv) => invitesCache.set(inv.code, inv.uses ?? 0));
+  } catch (e) {
+    console.error("Invite cache refresh failed:", e?.message || e);
+  }
 };
 
 app.post("/apply", upload.single("resume"), async (req, res) => {
   try {
-    console.log("Apply received", {
-      origin: req.headers.origin,
-      hasFile: !!req.file,
-      fileName: req.file?.originalname,
-      fileType: req.file?.mimetype,
-      fileSize: req.file?.size
-    });
-
-    if (!WEBHOOK_URL) {
-      console.error("Apply error: WEBHOOK_URL missing");
-      return res.status(500).json({ ok: false, error: "Webhook not configured" });
+    if (!APPLICATION_CHANNEL_ID) {
+      return res.status(500).json({ ok: false, error: "Application channel not configured" });
+    }
+    if (!client.isReady()) {
+      return res.status(503).json({ ok: false, error: "Bot not ready, try again shortly" });
     }
 
     const {
@@ -173,15 +175,6 @@ app.post("/apply", upload.single("resume"), async (req, res) => {
       position = "",
       message = ""
     } = req.body || {};
-
-    console.log("Apply body", {
-      name,
-      email,
-      discord_username,
-      discord_id,
-      position,
-      messageLength: (message || "").length
-    });
 
     if (!name || !email || !discord_username || !discord_id || !position || !message) {
       return res.status(400).json({ ok: false, error: "Missing required fields" });
@@ -197,9 +190,7 @@ app.post("/apply", upload.single("resume"), async (req, res) => {
     }
 
     const resumeUrl = await uploadResume(req.file, name);
-    console.log("Resume uploaded", { resumeUrl });
     if (!resumeUrl) {
-      console.error("Apply error: resume upload failed (S3 not configured?)");
       return res.status(500).json({ ok: false, error: "Resume storage not configured" });
     }
 
@@ -217,17 +208,21 @@ app.post("/apply", upload.single("resume"), async (req, res) => {
       ],
       footer: { text: `Applicant ID: ${discord_id}` }
     };
-    if (req.file?.mimetype?.startsWith("image/")) {
-      embed.image = { url: encodeURI(resumeUrl) };
+
+    if (!applicationChannel) {
+      const channel = await client.channels.fetch(APPLICATION_CHANNEL_ID);
+      if (!channel || !channel.isTextBased?.()) {
+        return res.status(500).json({ ok: false, error: "Application channel invalid" });
+      }
+      applicationChannel = channel;
     }
 
-    const response = await axios.post(`${WEBHOOK_URL}?wait=true`, {
+    const response = await applicationChannel.send({
       content,
       embeds: [embed]
     });
-    console.log("Webhook sent", { status: response?.status, id: response?.data?.id });
 
-    const msgId = response?.data?.id;
+    const msgId = response?.id;
     if (msgId) {
       const apps = loadApplications();
       apps[msgId] = {
@@ -237,22 +232,43 @@ app.post("/apply", upload.single("resume"), async (req, res) => {
         discord_id,
         position,
         resumeUrl,
-        status: "pending",
-        inviteUrl: null,
-        invitedAt: null
+        status: "pending"
       };
       saveApplications(apps);
     }
 
     res.json({ ok: true });
   } catch (err) {
-    console.error("Apply failed", {
-      message: err?.message,
-      code: err?.code,
-      status: err?.response?.status,
-      data: err?.response?.data
-    });
     res.status(500).json({ ok: false, error: "Failed to send application" });
+  }
+});
+
+app.get("/stripe-config", (_req, res) => {
+  if (!STRIPE_PUBLISHABLE_KEY) {
+    return res.status(500).json({ ok: false, error: "Stripe not configured" });
+  }
+  res.json({ ok: true, publishableKey: STRIPE_PUBLISHABLE_KEY });
+});
+
+app.post("/create-payment-intent", async (req, res) => {
+  try {
+    if (!stripe) {
+      return res.status(500).json({ ok: false, error: "Stripe not configured" });
+    }
+    const { product } = req.body || {};
+    const info = PRODUCT_PRICE_MAP[String(product || "").toLowerCase()];
+    if (!info) {
+      return res.status(400).json({ ok: false, error: "Invalid product" });
+    }
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: info.amount,
+      currency: info.currency,
+      description: info.name,
+      metadata: { product: product || "" }
+    });
+    res.json({ ok: true, clientSecret: paymentIntent.client_secret });
+  } catch (_e) {
+    res.status(500).json({ ok: false, error: "Failed to create payment" });
   }
 });
 
@@ -267,6 +283,7 @@ app.listen(PORT, () => {
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.GuildMessageReactions,
     GatewayIntentBits.DirectMessages
@@ -276,6 +293,45 @@ const client = new Client({
 
 client.on("ready", () => {
   console.log(`Bot online as ${client.user.tag}`);
+  refreshInvitesCache();
+  if (APPLICATION_CHANNEL_ID) {
+    client.channels.fetch(APPLICATION_CHANNEL_ID)
+      .then((ch) => {
+        if (ch && ch.isTextBased?.()) applicationChannel = ch;
+      })
+      .catch((e) => console.error("Application channel fetch failed:", e?.message || e));
+  }
+
+  if (!DISCORD_BOT_TOKEN || !DISCORD_CLIENT_ID || !GUILD_ID || REGISTER_COMMANDS === "false") {
+    console.log("Slash command not registered: missing DISCORD_BOT_TOKEN/DISCORD_CLIENT_ID/GUILD_ID");
+    return;
+  }
+
+  const rest = new REST({ version: "10" }).setToken(DISCORD_BOT_TOKEN);
+  const commands = [
+    {
+      name: "reply",
+      description: "Reply to an application (staff only)",
+      options: [
+        {
+          type: 3,
+          name: "message_id",
+          description: "Webhook message ID for the application",
+          required: true
+        },
+        {
+          type: 3,
+          name: "message",
+          description: "Your reply to the applicant",
+          required: true
+        }
+      ]
+    }
+  ];
+
+  rest.put(Routes.applicationGuildCommands(DISCORD_CLIENT_ID, GUILD_ID), { body: commands })
+    .then(() => console.log("Slash command /reply registered"))
+    .catch((e) => console.error("Slash command register failed:", e?.message || e));
 });
 
 client.on("messageReactionAdd", async (reaction, user) => {
@@ -284,8 +340,9 @@ client.on("messageReactionAdd", async (reaction, user) => {
     if (!reaction.message.guildId || reaction.message.guildId !== GUILD_ID) return;
 
     const emoji = reaction.emoji.name;
-    if (emoji !== "✅" && emoji !== "❌") return;
-
+    const isAccept = emoji === "\u2705";
+    const isReject = emoji === "\u274C";
+    if (!isAccept && !isReject) return;
     const member = await reaction.message.guild.members.fetch(user.id);
     const hasRole = member.roles.cache.has(FOUNDERS_ROLE_ID) || member.roles.cache.has(MANAGERS_ROLE_ID);
     if (!hasRole) return;
@@ -295,48 +352,50 @@ client.on("messageReactionAdd", async (reaction, user) => {
     if (!appData) return;
 
     const dmUser = await client.users.fetch(appData.discord_id);
-    if (emoji === "✅") {
+    if (isAccept) {
       appData.status = "accepted";
-      appData.invitedAt = Date.now();
-
-      const posNorm = normalizePosition(appData.position);
-      let inviteUrl = null;
-      if (posNorm !== "tester") {
+      let teamInviteUrl = null;
+      if (!/tester/i.test(appData.position || "")) {
         try {
-          inviteUrl = await createTeamInvite(client);
-          appData.inviteUrl = inviteUrl;
-        } catch (inviteErr) {
-          console.error("Invite creation failed:", inviteErr?.message || inviteErr);
+          const teamGuild = await client.guilds.fetch(TEAM_GUILD_ID);
+          const channel = teamGuild.systemChannel
+            || teamGuild.channels.cache.find((c) => c.isTextBased?.() && c.permissionsFor(teamGuild.members.me).has("CreateInstantInvite"));
+
+          if (channel) {
+            const invite = await channel.createInvite({
+              maxUses: 1,
+              unique: true,
+              maxAge: 60 * 60 * 24
+            });
+            appData.inviteCode = invite.code;
+            teamInviteUrl = invite.url;
+          }
+        } catch (e) {
+          console.error("Invite create failed:", e?.message || e);
         }
       }
-      apps[reaction.message.id] = appData;
+
       saveApplications(apps);
 
-      const lines = [
-        "You have been accepted to Arata Interactive!",
-        inviteUrl ? `Team Server: ${inviteUrl}` : "Team Server invite: (unavailable)",
-        "Portfolio Server: https://discord.gg/PzJ5cFwt",
-        `Happy to have you here as a ${appData.position}!`
-      ];
+      const acceptMsg =
+        `You have been accepted to Arata Interactive!\n` +
+        (teamInviteUrl ? `Team Server: ${teamInviteUrl}\n` : "Team Server: (invite pending)\n") +
+        `Portfolio Server: https://discord.gg/PzJ5cFwt\n` +
+        `Happy to have you here as a ${appData.position}!\n` +
+        `If you need to reach us: renkohang@arata.website`;
+
       try {
-        await dmUser.send(lines.join("\n"));
-      } catch (dmErr) {
-        await notifyFailure(
-          client,
-          `DM failed for <@${appData.discord_id}> (Accepted). Invite: ${inviteUrl || "none"} | Position: ${appData.position}`
-        );
+        await dmUser.send(acceptMsg);
+      } catch (e) {
+        console.error("DM failed:", e?.message || e);
       }
-    } else if (emoji === "❌") {
+    } else if (isReject) {
       appData.status = "denied";
-      apps[reaction.message.id] = appData;
       saveApplications(apps);
       try {
         await dmUser.send("Sorry, you've been denied :(");
-      } catch (dmErr) {
-        await notifyFailure(
-          client,
-          `DM failed for <@${appData.discord_id}> (Denied).`
-        );
+      } catch (e) {
+        console.error("DM failed:", e?.message || e);
       }
     }
   } catch (e) {
@@ -346,26 +405,75 @@ client.on("messageReactionAdd", async (reaction, user) => {
 
 client.on("guildMemberAdd", async (member) => {
   try {
-    if (member.guild.id !== TEAM_SERVER_ID) return;
+    if (member.guild.id !== TEAM_GUILD_ID) return;
+
     const apps = loadApplications();
     const appEntry = Object.values(apps).find(
-      (a) => a.discord_id === member.id && a.status === "accepted"
+      (a) => a.discord_id === member.user.id && a.status === "accepted"
     );
     if (!appEntry) return;
 
-    await member.roles.add(DEV_ROLE_ID).catch(() => {});
-    const roleId = positionRoleMap.get(normalizePosition(appEntry.position));
-    if (roleId) {
-      await member.roles.add(roleId).catch(() => {});
+    const invites = await member.guild.invites.fetch();
+    let usedCode = null;
+    invites.forEach((inv) => {
+      const previous = invitesCache.get(inv.code) ?? 0;
+      if ((inv.uses ?? 0) > previous) usedCode = inv.code;
+    });
+    invitesCache.clear();
+    invites.forEach((inv) => invitesCache.set(inv.code, inv.uses ?? 0));
+
+    if (appEntry.inviteCode && usedCode && usedCode !== appEntry.inviteCode) return;
+    if (/tester/i.test(appEntry.position || "")) return;
+
+    const rolesToAdd = [DEV_ROLE];
+    const positionRole = ROLE_MAP[appEntry.position] || null;
+    if (positionRole) rolesToAdd.push(positionRole);
+
+    await member.roles.add(rolesToAdd);
+    await member.guild.systemChannel?.send?.(
+      `Welcome to Arata Int. <@${member.id}>! You have been roled: <@&${DEV_ROLE}>${positionRole ? ` and <@&${positionRole}>` : ""}`
+    );
+  } catch (e) {
+    console.error("guildMemberAdd failed:", e?.message || e);
+  }
+});
+
+client.on("interactionCreate", async (interaction) => {
+  try {
+    if (!interaction.isChatInputCommand()) return;
+    if (interaction.commandName !== "reply") return;
+    if (!interaction.guild || interaction.guild.id !== GUILD_ID) return;
+
+    const member = await interaction.guild.members.fetch(interaction.user.id);
+    const hasRole = member.roles.cache.has(FOUNDERS_ROLE_ID) || member.roles.cache.has(MANAGERS_ROLE_ID);
+    if (!hasRole) {
+      return interaction.reply({ content: "You do not have permission to use this command.", ephemeral: true });
     }
 
-    const welcome = `Welcome to Arata Int. <@${member.id}>! You have been roled: <@&${DEV_ROLE_ID}> and ${appEntry.position}.`;
-    const channel =
-      member.guild.systemChannel ||
-      member.guild.channels.cache.find((c) => c.type === ChannelType.GuildText);
-    if (channel) channel.send(welcome).catch(() => {});
+    const msgId = interaction.options.getString("message_id", true);
+    const replyText = interaction.options.getString("message", true);
+
+    const apps = loadApplications();
+    const appData = apps[msgId];
+    if (!appData) {
+      return interaction.reply({ content: "Application not found for that message ID.", ephemeral: true });
+    }
+
+    const dmUser = await client.users.fetch(appData.discord_id);
+    const replyBody =
+      `Reply from Arata Interactive:\n` +
+      `${replyText}\n\n` +
+      `If needed, email us at renkohang@arata.website`;
+
+    try {
+      await dmUser.send(replyBody);
+      return interaction.reply({ content: `Sent DM to ${appData.discord_username} (email: ${appData.email}).`, ephemeral: true });
+    } catch (e) {
+      console.error("DM failed:", e?.message || e);
+      return interaction.reply({ content: "DM failed (user may have DMs closed).", ephemeral: true });
+    }
   } catch (e) {
-    console.error("guildMemberAdd error:", e?.message || e);
+    console.error("interactionCreate failed:", e?.message || e);
   }
 });
 

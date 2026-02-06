@@ -137,6 +137,35 @@
             font-weight: 800;
             cursor: pointer;
         }
+        .btn-neo {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 12px 20px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.12);
+            background:
+                radial-gradient(120% 120% at 30% 20%, rgba(255,255,255,0.25), rgba(255,255,255,0) 60%),
+                linear-gradient(135deg, rgba(139, 92, 246, 0.6), rgba(34, 211, 238, 0.45));
+            color: #fff;
+            font-weight: 700;
+            transition: transform .25s var(--ease), box-shadow .25s var(--ease), filter .25s var(--ease);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .btn-neo:hover { transform: translateY(-2px); filter: brightness(1.05); }
+
+        .btn-ghost {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.15);
+            color: #fff;
+            padding: 10px 16px;
+            border-radius: 999px;
+            cursor: pointer;
+            text-decoration: none;
+        }
         .notice {
             margin-top: 16px;
             padding: 12px 14px;
@@ -184,7 +213,7 @@
                     <input class="input" name="topic" placeholder="What are you inquiring about?" required>
                     <textarea class="textarea" name="message" placeholder="Your Message" required></textarea>
                 </div>
-                <button class="send" type="submit">Send Message</button>
+                <button class="send btn-neo" type="submit">Send Message</button>
                 <div class="notice" id="sent-notice" style="display:none;">Message Sent! Expect a response soon.</div>
             </form>
         </div>
@@ -192,10 +221,25 @@
     <script>
         const form = document.getElementById('contact-form');
         const notice = document.getElementById('sent-notice');
+        const spamPhrases = [
+            "not showing up in any search results",
+            "google, yahoo, or bing",
+            "keywords related to your company",
+            "seo",
+            "search results"
+        ];
         if (form) {
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 if (notice) notice.style.display = 'none';
+                const name = (form.elements.name?.value || "").toLowerCase();
+                const email = (form.elements.email?.value || "").toLowerCase();
+                const msg = (form.elements.message?.value || "").toLowerCase();
+                const isSpam = spamPhrases.some(p => msg.includes(p)) || msg.length < 10;
+                if (isSpam || !email.includes("@") || !email.includes(".")) {
+                    alert('Please submit a valid, serious inquiry.');
+                    return;
+                }
                 const formData = new FormData(form);
                 try {
                     const res = await fetch(form.action, { method: 'POST', body: formData });
