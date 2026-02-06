@@ -165,6 +165,7 @@
         .time-info { display: flex; justify-content: space-between; font-size: 0.6rem; color: #444; font-family: 'JetBrains Mono', monospace; margin-top: 6px; }
 
         /* Main Content */
+        html { scroll-behavior: smooth; }
         main { flex: 1; overflow-y: auto; position: relative; scroll-behavior: smooth; z-index: 10; }
         main::-webkit-scrollbar { width: 6px; }
         main::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
@@ -252,15 +253,25 @@
         
         /* Profile Layout */
         .profile-banner { width: 100%; height: 360px; object-fit: cover; border-radius: 26px; mask-image: linear-gradient(to bottom, black 50%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%); background: #111; }
-        .profile-header { padding: 0 40px; margin-top: -120px; position: relative; display: flex; align-items: flex-end; gap: 40px; flex-wrap: wrap; }
+        .profile-hero { padding: 0 40px; margin-top: -120px; position: relative; display: flex; gap: 28px; align-items: center; }
+        .profile-hero::before,
+        .profile-hero::after {
+            content: none;
+        }
         .pfp-box { position: relative; width: 180px; height: 180px; flex-shrink: 0; }
         .pfp-img { width: 100%; height: 100%; border-radius: 50%; border: 6px solid var(--bg-dark); background: #111; object-fit: cover; box-shadow: 0 18px 50px rgba(0,0,0,0.55); }
         .status-badge { position: absolute; bottom: 12px; right: 12px; width: 36px; height: 36px; border-radius: 50%; border: 5px solid var(--bg-dark); z-index: 5; display: flex; align-items: center; justify-content: center; }
         .status-online { background: #23a559; } .status-dnd { background: #f23f43; } .status-idle { background: #f0b232; } .status-offline { background: #747f8d; }
         
-        .user-info h1 { font-size: 4.4rem; font-weight: 800; line-height: 0.95; margin-bottom: 10px; letter-spacing: -2px; font-family: 'Space Grotesk', sans-serif; }
-        .stats-col { display: flex; flex-direction: column; gap: 5px; margin-bottom: 20px; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: #ccc; }
-        .stat-item { background: rgba(255,255,255,0.06); padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06); display: inline-block; width: fit-content; }
+        .hero-status { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 2px; color: #8b94a0; display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #23a559; box-shadow: 0 0 12px rgba(35,165,89,0.6); }
+        .hero-blurb { max-width: 520px; color: #9aa3ad; line-height: 1.7; margin: 8px 0 18px; }
+        .user-info { display: flex; flex-direction: column; }
+        .user-info h1 { font-size: 4.8rem; font-weight: 800; line-height: 0.95; margin-bottom: 8px; letter-spacing: -2px; font-family: 'Space Grotesk', sans-serif; }
+        .stats-col { order: 2; }
+        .hero-status { order: 3; margin-top: 8px; }
+        .stats-col { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 20px; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: #cfd6de; max-width: 520px; }
+        .stat-item { background: rgba(255,255,255,0.04); padding: 12px 14px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.08); display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 12px 30px rgba(0,0,0,0.35); }
         .title-badge { background: #fff; color: #000; font-weight: 900; }
         
         .socials-row { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
@@ -338,6 +349,36 @@
             box-shadow: 0 20px 50px rgba(88, 101, 242, 0.5); 
             background: #4752C4;
         }
+        
+        .btn-neo {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 12px 20px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.12);
+            background:
+                radial-gradient(120% 120% at 30% 20%, rgba(255,255,255,0.25), rgba(255,255,255,0) 60%),
+                linear-gradient(135deg, rgba(139, 92, 246, 0.6), rgba(34, 211, 238, 0.45));
+            color: #fff;
+            font-weight: 700;
+            transition: transform .25s var(--ease-out), box-shadow .25s var(--ease-out), filter .25s var(--ease-out);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .btn-neo:hover { transform: translateY(-2px); filter: brightness(1.05); }
+
+        .btn-ghost {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.15);
+            color: #fff;
+            padding: 10px 16px;
+            border-radius: 999px;
+            cursor: pointer;
+            text-decoration: none;
+        }
 
         /* Themes */
         .ren-theme h1, .ren-theme .s-name { color: var(--accent-ren); text-shadow: 0 0 50px rgba(56, 189, 248, 0.3); }
@@ -390,8 +431,10 @@
             main { padding-bottom: 200px; width: 100%; overflow: visible; }
             .page { padding: 40px 20px; }
             .home-stats { grid-template-columns: 1fr; }
-            .profile-header { margin-top: -80px; justify-content: center; text-align: center; }
+            .profile-hero { margin-top: -80px; grid-template-columns: 1fr; text-align: center; }
+            .profile-hero::before, .profile-hero::after { display: none; }
             .user-info { align-items: center; display: flex; flex-direction: column; }
+            .stats-col { grid-template-columns: 1fr; }
             .user-info h1 { font-size: 3.5rem; }
             .socials-row { justify-content: center; }
             .grid { grid-template-columns: 1fr; }
@@ -433,6 +476,7 @@
             opacity: 0;
             visibility: hidden;
         }
+        #pageLoader { opacity: 0; visibility: hidden; pointer-events: none; }
         .loader-orbit {
             width: 100px;
             height: 100px;
@@ -582,6 +626,39 @@
         .feature-card i { color: rgba(255,255,255,0.7); }
         .feature-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,0.35); }
 
+        .reveal { opacity: 0; transform: translateY(14px); transition: opacity 0.6s ease, transform 0.6s ease; }
+        .reveal.is-visible { opacity: 1; transform: translateY(0); }
+
+        .arata-tiles {
+            display: inline-grid;
+            grid-auto-flow: column;
+            gap: 10px;
+            margin-top: 14px;
+            align-items: center;
+        }
+        .arata-tiles span {
+            width: 36px;
+            height: 36px;
+            display: grid;
+            place-items: center;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.9rem;
+            letter-spacing: 0;
+            color: rgba(255,255,255,0.85);
+            border-radius: 10px;
+            background: linear-gradient(160deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+            border: 1px solid rgba(255,255,255,0.12);
+            box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+            transform: translate(0, 0) rotate(0deg);
+            animation: tileShuffle 6s ease-in-out infinite;
+            animation-delay: var(--delay, 0s);
+        }
+        @keyframes tileShuffle {
+            0%, 20% { transform: translate(0, 0) rotate(0deg); opacity: 0.9; }
+            45% { transform: translate(var(--dx, 0px), var(--dy, 0px)) rotate(var(--rot, 0deg)); opacity: 0.65; }
+            70%, 100% { transform: translate(0, 0) rotate(0deg); opacity: 0.95; }
+        }
+
         .partners-section { width: 100%; max-width: 900px; margin-top: 60px; text-align: left; }
         .partner-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
         .partner-card {
@@ -715,8 +792,8 @@
             align-items: center;
             justify-content: space-between;
             gap: 16px;
-            padding: 18px 36px;
-            min-height: 64px;
+            padding: 16px 32px;
+            min-height: 60px;
             background: rgba(12, 14, 20, 0.98);
             backdrop-filter: blur(18px);
             border-bottom: 1px solid rgba(255,255,255,0.06);
@@ -786,6 +863,7 @@
             letter-spacing: 1px;
         }
         .top-toggle {
+            display: none;
             border: 1px solid rgba(255,255,255,0.12);
             background: rgba(255,255,255,0.04);
             color: #e9edf1;
@@ -885,7 +963,8 @@
             .partner-grid { grid-template-columns: 1fr; }
             .featured-row { padding-bottom: 4px; }
             .creator-avatar-wrap { height: 180px; }
-            .top-bar { padding: 14px 18px; flex-direction: column; align-items: stretch; }
+            .top-bar { padding: 10px 14px; min-height: 52px; flex-direction: column; align-items: stretch; }
+            .top-toggle { display: inline-flex; }
             .top-links { justify-content: flex-start; }
         }
 
@@ -914,11 +993,323 @@
             }
         }
 
+        /* Design polish overrides */
+        body {
+            background:
+                radial-gradient(1400px 900px at 20% 10%, rgba(56, 189, 248, 0.08), transparent 62%),
+                radial-gradient(1100px 900px at 85% 20%, rgba(239, 68, 68, 0.10), transparent 60%),
+                linear-gradient(180deg, #0b0c12, #090a10);
+        }
+        .top-bar {
+            background: linear-gradient(180deg, rgba(12, 14, 20, 0.9), rgba(10, 12, 18, 0.75));
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            backdrop-filter: blur(18px);
+        }
+        .card,
+        .featured-card,
+        .creator-card,
+        .partner-card,
+        .h-stat {
+            background: linear-gradient(160deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015));
+            border-color: rgba(255,255,255,0.09);
+        }
+        .card:hover,
+        .featured-card:hover,
+        .creator-card:hover,
+        .partner-card:hover {
+            box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+        }
+        .section-title { color: #8a93a0; }
+        .btn-cta,
+        .btn-action {
+            border-color: rgba(255,255,255,0.18);
+        }
+        .apply-form .file-label {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 14px 18px;
+            border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(255,255,255,0.03);
+            color: #cfd6de;
+        }
+        .apply-form .file-label span { font-weight: 700; }
+        .apply-form .file-label input[type="file"] {
+            width: 100%;
+            color: #cfd6de;
+        }
 
 
+
+        /* --- Design Refresh Overrides --- */
+        :root { --accent-rgb: 255, 255, 255; }
+        .featured-card,
+        .creator-card,
+        .card,
+        .h-stat,
+        .partner-card {
+            border-color: rgba(255,255,255,0.08);
+            background: linear-gradient(160deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015));
+        }
+        .featured-card:hover,
+        .creator-card:hover,
+        .card:hover,
+        .h-stat:hover {
+            box-shadow:
+                0 0 0 1px rgba(var(--accent-rgb), 0.18),
+                0 18px 50px rgba(var(--accent-rgb), 0.16),
+                0 28px 70px rgba(0,0,0,0.55);
+            transform: translateY(-3px);
+        }
+        .featured-badge,
+        .creator-role,
+        .stat-pill {
+            border-color: rgba(255,255,255,0.12);
+            background: rgba(255,255,255,0.06);
+            color: #e8edf3;
+        }
+        .section-title { color: #8b94a0; }
+        .top-bar {
+            background: linear-gradient(180deg, rgba(12, 14, 20, 0.9), rgba(10, 12, 18, 0.8));
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            backdrop-filter: blur(18px);
+        }
+        .creator-avatar {
+            border: 1px solid rgba(255,255,255,0.12);
+            box-shadow: 0 10px 26px rgba(0,0,0,0.5);
+        }
+        .theme-toggle {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            color: #d9dee5;
+            border-radius: 999px;
+            padding: 8px 14px;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .theme-panel {
+            position: fixed;
+            top: 82px;
+            right: 24px;
+            width: 240px;
+            background: rgba(12, 14, 20, 0.94);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            padding: 14px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            z-index: 240;
+            opacity: 0;
+            transform: translateY(-8px);
+            pointer-events: none;
+            transition: 0.25s var(--ease-out);
+            backdrop-filter: blur(18px);
+        }
+        .theme-panel.open { opacity: 1; transform: translateY(0); pointer-events: auto; }
+        .theme-title { font-size: 0.65rem; letter-spacing: 2px; text-transform: uppercase; color: #7f8791; margin-bottom: 10px; font-weight: 800; }
+        .theme-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+        .theme-swatch {
+            border-radius: 12px;
+            padding: 10px;
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #e8edf3;
+        }
+        .theme-swatch.active { box-shadow: 0 0 0 1px rgba(255,255,255,0.35), 0 10px 30px rgba(0,0,0,0.35); }
+        /* Full Redesign Pass */
+        .home-container {
+            max-width: 1200px;
+            gap: 14px;
+        }
+        .typewriter h1 {
+            letter-spacing: -3px;
+            text-shadow: 0 24px 60px rgba(0,0,0,0.55);
+        }
+        .subtitle {
+            letter-spacing: 8px;
+            opacity: 0.9;
+        }
+        .section-block {
+            padding: 0 6px;
+        }
+        .featured-section {
+            position: relative;
+            margin-top: 60px;
+        }
+        .products-section {
+            margin-top: 80px;
+        }
+        .products-tabs {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 18px;
+        }
+        .products-tab {
+            padding: 10px 16px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(12,14,20,0.6);
+            color: #cfd6de;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            transition: all 0.25s var(--ease-out);
+            cursor: pointer;
+        }
+        .products-tab.active {
+            background: #fff;
+            color: #0b0b0b;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+        }
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 22px;
+        }
+        .product-card {
+            background: linear-gradient(160deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 22px;
+            overflow: hidden;
+            box-shadow: 0 22px 50px rgba(0,0,0,0.45);
+            transition: transform 0.25s var(--ease-out), box-shadow 0.35s var(--ease-out);
+        }
+        .product-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 28px 70px rgba(0,0,0,0.6);
+        }
+        .product-media {
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: #0a0c12;
+        }
+        .product-media video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .product-body {
+            padding: 18px 20px 20px;
+        }
+        .product-title {
+            font-size: 1.15rem;
+            font-weight: 800;
+            margin-bottom: 6px;
+        }
+        .product-meta {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            color: #9aa3ad;
+            font-size: 0.8rem;
+            margin-bottom: 12px;
+        }
+        .product-price {
+            font-weight: 800;
+            color: #fff;
+        }
+        .product-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .product-btn {
+            padding: 10px 14px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(255,255,255,0.06);
+            color: #fff;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.85rem;
+            transition: transform 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
+        }
+        .product-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.4);
+        }
+        .products-empty {
+            padding: 24px;
+            border-radius: 18px;
+            border: 1px dashed rgba(255,255,255,0.12);
+            color: #7f8793;
+            text-align: center;
+        }
+        .featured-section::before {
+            content: "";
+            position: absolute;
+            inset: -80px -40px auto;
+            height: 240px;
+            background: radial-gradient(circle at center, rgba(var(--accent-rgb), 0.18), transparent 65%);
+            pointer-events: none;
+            filter: blur(20px);
+        }
+        .featured-row {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 22px;
+            align-items: stretch;
+        }
+        .featured-card {
+            border-radius: 26px;
+            overflow: hidden;
+            transform-origin: center;
+        }
+        .featured-card img {
+            height: 210px;
+            object-fit: cover;
+        }
+        .featured-body {
+            padding: 18px 18px 20px;
+        }
+        .creator-card {
+            border-radius: 26px;
+            padding: 18px;
+        }
+        .creator-avatar-wrap {
+            border-radius: 20px;
+            overflow: hidden;
+        }
+        .creator-avatar {
+            border-radius: 20px;
+        }
+        .reveal {
+            opacity: 0;
+            transform: translateY(16px);
+            transition: opacity 0.3s var(--ease-out), transform 0.3s var(--ease-out);
+        }
+        .reveal.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .partners-section {
+            margin-top: 80px;
+        }
+        @media (max-width: 1100px) {
+            .featured-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+        @media (max-width: 900px) {
+            .featured-row { grid-template-columns: 1fr; }
+            .theme-panel { right: 14px; top: 70px; }
+        }
     </style>
 </head>
-<body class="loading">
+<body>
 
     <div id="pageLoader" aria-hidden="true">
         <div class="loader-orbit"></div>
@@ -979,6 +1370,10 @@
             <img src="https://images-ext-1.discordapp.net/external/DW8QPvoBT3zPQPsd7qVqVwyg4u_sWe-5XuPG_jbr0HQ/%3Fsize%3D512/https/cdn.discordapp.com/avatars/1150126168289317034/a_99eb30ff985318fa967d39a05152b1a4.gif" loading="lazy" decoding="async">
             <span class="nav-text"><span class="nav-name">Cazu</span><span class="nav-role">@Arata Support</span></span>
         </div>
+        <div class="nav-btn" id="nav-brimo" onclick="tab('brimo')">
+            <img src="https://cdn.discordapp.com/embed/avatars/0.png" loading="lazy" decoding="async">
+            <span class="nav-text"><span class="nav-name">Brimo</span><span class="nav-role">@Arata Support</span></span>
+        </div>
 
         <div class="player" id="player-ui">
             <div class="video-container">
@@ -1014,10 +1409,6 @@
                 <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23fff' rx='20'/><path d='M50%2020%20L80%2080%20L65%2080%20L58%2065%20L42%2065%20L35%2080%20L20%2080%20Z%20M50%2035%20L55%2055%20L45%2055%20Z' fill='%23000'/></svg>" alt="Arata" loading="eager" decoding="async">
                 ARATA INTERACTIVE
             </div>
-            <div class="top-brand">
-                <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23fff' rx='20'/><path d='M50%2020%20L80%2080%20L65%2080%20L58%2065%20L42%2065%20L35%2080%20L20%2080%20Z%20M50%2035%20L55%2055%20L45%2055%20Z' fill='%23000'/></svg>" alt="Arata" loading="eager" decoding="async">
-                ARATA INTERACTIVE
-            </div>
             <div class="top-links">
                 <a href="#" onclick="scrollToSection('home'); return false;">Home</a>
                 <a href="#" onclick="scrollToSection('featured'); return false;">Featured</a>
@@ -1027,9 +1418,14 @@
                 <a href="#" onclick="scrollToSection('apply'); return false;">Apply</a>
             </div>
             <div class="top-actions">
+                <button class="theme-toggle" id="theme-toggle" type="button">Theme</button>
                 <button class="top-toggle" id="topbar-toggle" type="button">Toggle Bar</button>
-                <a href="contact.html" class="contact-btn">Contact Us</a>
+                <a href="contact.html" class="btn-ghost">Contact Us</a>
             </div>
+        </div>
+        <div class="theme-panel" id="theme-panel">
+            <div class="theme-title">Theme Presets</div>
+            <div class="theme-grid" id="theme-grid"></div>
         </div>
         <div id="home" class="page active">
             <div class="home-container">
@@ -1037,6 +1433,14 @@
                     <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23fff' rx='20'/><path d='M50%2020%20L80%2080%20L65%2080%20L58%2065%20L42%2065%20L35%2080%20L20%2080%20Z%20M50%2035%20L55%2055%20L45%2055%20Z' fill='%23000'/></svg>" class="home-logo" loading="lazy" decoding="async">
                     <div class="typewriter">
                         <h1>ARATA INTERACTIVE</h1>
+                        <p class="hero-blurb">Crafting digital experiences for Arata Interactive.</p>
+                    </div>
+                    <div class="arata-tiles" aria-hidden="true">
+                        <span style="--dx:-10px; --dy:8px; --rot:-6deg; --delay:0s;">A</span>
+                        <span style="--dx:12px; --dy:-6px; --rot:6deg; --delay:0.15s;">R</span>
+                        <span style="--dx:-6px; --dy:-10px; --rot:4deg; --delay:0.3s;">A</span>
+                        <span style="--dx:8px; --dy:10px; --rot:-4deg; --delay:0.45s;">T</span>
+                        <span style="--dx:-12px; --dy:-4px; --rot:8deg; --delay:0.6s;">A</span>
                     </div>
                 </div>
                 <p class="subtitle">We bring worlds to life</p>
@@ -1074,6 +1478,66 @@
                     <div class="featured-row" id="featured-row"></div>
                 </div>
 
+                <div id="products" class="section-block products-section">
+                    <div class="section-title"><i class="fa-solid fa-box"></i> Products</div>
+                    <div class="products-tabs" role="tablist" aria-label="Product categories">
+                        <button class="products-tab active" type="button" data-tab="animations">Animations</button>
+                        <button class="products-tab" type="button" data-tab="scripting">Scripting</button>
+                        <button class="products-tab" type="button" data-tab="vfx">VFX</button>
+                    </div>
+                    <div class="products-panels">
+                        <div class="products-grid" data-panel="animations">
+                            <div class="product-card">
+                                <div class="product-media">
+                                    <video src="https://cdn.discordapp.com/attachments/1456409796667510996/1469411367978274877/naoya.mp4?ex=69878f7a&is=69863dfa&hm=c0c67b320c12723c2813b32f78dccab6edad076f965eed3bbec19d09157e874d&" muted loop playsinline preload="metadata"></video>
+                                </div>
+                                <div class="product-body">
+                                    <div class="product-title">Naoya</div>
+                                    <div class="product-meta">
+                                        <span class="product-price">$10</span>
+                                        <span>Animation</span>
+                                    </div>
+                                    <div class="product-actions">
+                                        <a class="product-btn" href="products.html">View Details</a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="product-card">
+                                <div class="product-media">
+                                    <video src="https://cdn.discordapp.com/attachments/1456409796667510996/1469411369106407668/lapse_blue.mp4?ex=69878f7a&is=69863dfa&hm=915bf9d90eed8233224e93a3dbee506ae2d48fb9d5b60eec222e0c0d08bec88d&" muted loop playsinline preload="metadata"></video>
+                                </div>
+                                <div class="product-body">
+                                    <div class="product-title">Lapse Blue</div>
+                                    <div class="product-meta">
+                                        <span class="product-price">$10</span>
+                                        <span>Animation</span>
+                                    </div>
+                                    <div class="product-actions">
+                                        <a class="product-btn" href="products.html">View Details</a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="product-card">
+                                <div class="product-media">
+                                    <video src="https://cdn.discordapp.com/attachments/1456409796667510996/1469411370364829869/sukuna_domainn.mp4?ex=69878f7b&is=69863dfb&hm=2f08ee4b3b739feaf37adf487ef8d1fcd058879f8e3c82504257e576d8f4992b&" muted loop playsinline preload="metadata"></video>
+                                </div>
+                                <div class="product-body">
+                                    <div class="product-title">Sukuna</div>
+                                    <div class="product-meta">
+                                        <span class="product-price">$15</span>
+                                        <span>Animation</span>
+                                    </div>
+                                    <div class="product-actions">
+                                        <a class="product-btn" href="products.html">View Details</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="products-empty" data-panel="scripting" hidden>No scripting products yet.</div>
+                        <div class="products-empty" data-panel="vfx" hidden>No VFX products yet.</div>
+                    </div>
+                </div>
+
                 <div id="creators" class="section-block">
                     <div class="section-title"><i class="fa-solid fa-user-astronaut"></i> Meet The Creators</div>
                     <div class="creators-grid" id="creators-grid"></div>
@@ -1103,7 +1567,7 @@
 
                 <div id="apply" class="apply-section section-block">
                     <h2>Wanna join Arata Interactive?</h2>
-                    <p>All positions are open right now except Manager. Please apply below.</p>
+                    <p>All positions are open right now except Manager. Apply on our dedicated page.</p>
                     <div class="apply-roles">
                         <span class="apply-role">Programmer</span>
                         <span class="apply-role">QA</span>
@@ -1114,25 +1578,9 @@
                         <span class="apply-role closed">Manager (Closed)</span>
                     </div>
                     <div class="apply-note">Please do not send us a joke message!</div>
-                    <form id="apply-form" class="apply-form" enctype="multipart/form-data">
-                        <input type="text" name="name" placeholder="Full Name" required>
-                        <input type="email" name="email" placeholder="Email" required>
-                        <input type="text" name="discord_username" placeholder="Discord Username (e.g. user#1234)" required>
-                        <input type="text" name="discord_id" placeholder="Discord ID" required>
-                        <select name="position" class="full" required>
-                            <option value="" disabled selected>Select a position</option>
-                            <option>Programmer</option>
-                            <option>QA</option>
-                            <option>VFX</option>
-                            <option>UI/UX</option>
-                            <option>Animator</option>
-                            <option>Map Designer</option>
-                        </select>
-                        <textarea name="message" placeholder="Tell us about yourself and what you can do." required></textarea>
-                        <input type="file" name="resume" class="full" accept=".pdf,.png,.jpg,.jpeg" required>
-                        <button class="apply-submit" type="submit">Submit Application</button>
-                        <div id="apply-status" class="apply-status"></div>
-                    </form>
+                    <div style="margin-top: 16px;">
+                        <a href="apply.html" class="btn-neo">Apply Now</a>
+                    </div>
                 </div>
 
                 <div class="partners-section" id="partners">
@@ -1152,13 +1600,15 @@
 
         <div id="ren" class="page ren-theme">
             <img src="" class="profile-banner" id="banner-ren" loading="lazy" decoding="async">
-            <div class="profile-header">
+            <div class="profile-hero">
                 <div class="pfp-box">
                     <img src="" class="pfp-img" loading="lazy" decoding="async">
                     <div class="status-badge" id="status-ren"></div>
                 </div>
                 <div class="user-info">
+                    <div class="hero-status"><span class="status-dot"></span> Available for work</div>
                     <h1>Ren</h1>
+                    <p class="hero-blurb">Crafting digital experiences for Arata Interactive.</p>
                     <div class="stats-col">
                         <span class="stat-item title-badge">Founder</span>
                         <span class="stat-item">258M+ Visits Contributed</span>
@@ -1181,13 +1631,15 @@
 
         <div id="m1" class="page m1-theme">
             <img src="" class="profile-banner" id="banner-m1" loading="lazy" decoding="async">
-            <div class="profile-header">
+            <div class="profile-hero">
                 <div class="pfp-box">
                     <img src="" class="pfp-img" loading="lazy" decoding="async">
                     <div class="status-badge" id="status-m1"></div>
                 </div>
                 <div class="user-info">
+                    <div class="hero-status"><span class="status-dot"></span> Available for work</div>
                     <h1>M1</h1>
+                    <p class="hero-blurb">Crafting digital experiences for Arata Interactive.</p>
                     <div class="stats-col">
                         <span class="stat-item title-badge">Co-Founder</span>
                         <span class="stat-item">90M+ Visits Contributed</span>
@@ -1208,13 +1660,15 @@
 
         <div id="k" class="page k-theme">
             <img src="" class="profile-banner" id="banner-k" loading="lazy" decoding="async">
-            <div class="profile-header">
+            <div class="profile-hero">
                 <div class="pfp-box">
                     <img src="" class="pfp-img" loading="lazy" decoding="async">
                     <div class="status-badge" id="status-k"></div>
                 </div>
                 <div class="user-info">
+                    <div class="hero-status"><span class="status-dot"></span> Available for work</div>
                     <h1>K</h1>
+                    <p class="hero-blurb">Crafting digital experiences for Arata Interactive.</p>
                     <div class="stats-col">
                         <span class="stat-item title-badge">Team</span>
                         <span class="stat-item">Supporting Founder</span>
@@ -1235,13 +1689,15 @@
 
         <div id="zero" class="page zero-theme">
             <img src="" class="profile-banner" id="banner-zero" loading="lazy" decoding="async">
-            <div class="profile-header">
+            <div class="profile-hero">
                 <div class="pfp-box">
                     <img src="" class="pfp-img" loading="lazy" decoding="async">
                     <div class="status-badge" id="status-zero"></div>
                 </div>
                 <div class="user-info">
+                    <div class="hero-status"><span class="status-dot"></span> Available for work</div>
                     <h1>Zero</h1>
+                    <p class="hero-blurb">Crafting digital experiences for Arata Interactive.</p>
                     <div class="stats-col">
                         <span class="stat-item title-badge">Manager</span>
                     </div>
@@ -1261,13 +1717,15 @@
 
         <div id="eli" class="page eli-theme">
             <img src="" class="profile-banner" id="banner-eli" loading="lazy" decoding="async">
-            <div class="profile-header">
+            <div class="profile-hero">
                 <div class="pfp-box">
                     <img src="" class="pfp-img" loading="lazy" decoding="async">
                     <div class="status-badge" id="status-eli"></div>
                 </div>
                 <div class="user-info">
+                    <div class="hero-status"><span class="status-dot"></span> Available for work</div>
                     <h1>Eli</h1>
+                    <p class="hero-blurb">Crafting digital experiences for Arata Interactive.</p>
                     <div class="stats-col">
                         <span class="stat-item">Supporting</span>
                     </div>
@@ -1288,13 +1746,15 @@
 
         <div id="aizen" class="page aizen-theme">
             <img src="" class="profile-banner" id="banner-aizen" loading="lazy" decoding="async">
-            <div class="profile-header">
+            <div class="profile-hero">
                 <div class="pfp-box">
                     <img src="" class="pfp-img" loading="lazy" decoding="async">
                     <div class="status-badge" id="status-aizen"></div>
                 </div>
                 <div class="user-info">
+                    <div class="hero-status"><span class="status-dot"></span> Available for work</div>
                     <h1>Aizen</h1>
+                    <p class="hero-blurb">Crafting digital experiences for Arata Interactive.</p>
                     <div class="stats-col">
                         <span class="stat-item">Team</span>
                     </div>
@@ -1316,13 +1776,15 @@
 
         <div id="lummy" class="page lummy-theme">
             <img src="" class="profile-banner" id="banner-lummy" loading="lazy" decoding="async">
-            <div class="profile-header">
+            <div class="profile-hero">
                 <div class="pfp-box">
                     <img src="" class="pfp-img" loading="lazy" decoding="async">
                     <div class="status-badge" id="status-lummy"></div>
                 </div>
                 <div class="user-info">
+                    <div class="hero-status"><span class="status-dot"></span> Available for work</div>
                     <h1>LummY</h1>
+                    <p class="hero-blurb">Crafting digital experiences for Arata Interactive.</p>
                     <div class="stats-col">
                         <span class="stat-item">VFX Artist</span>
                     </div>
@@ -1342,13 +1804,15 @@
 
         <div id="sleepy" class="page sleepy-theme">
             <img src="" class="profile-banner" id="banner-sleepy" loading="lazy" decoding="async">
-            <div class="profile-header">
+            <div class="profile-hero">
                 <div class="pfp-box">
                     <img src="" class="pfp-img" loading="lazy" decoding="async">
                     <div class="status-badge" id="status-sleepy"></div>
                 </div>
                 <div class="user-info">
+                    <div class="hero-status"><span class="status-dot"></span> Available for work</div>
                     <h1>Sleepy</h1>
+                    <p class="hero-blurb">Crafting digital experiences for Arata Interactive.</p>
                     <div class="stats-col">
                         <span class="stat-item">Map Designer</span>
                     </div>
@@ -1368,12 +1832,13 @@
 
         <div id="cazu" class="page cazu-theme">
             <img src="" class="profile-banner" id="banner-cazu" loading="lazy" decoding="async">
-            <div class="profile-header">
+            <div class="profile-hero">
                 <div class="pfp-box">
                     <img src="" class="pfp-img" loading="lazy" decoding="async">
                     <div class="status-badge" id="status-cazu"></div>
                 </div>
                 <div class="user-info">
+                    <div class="hero-status"><span class="status-dot"></span> Available for work</div>
                     <h1>Cazu</h1>
                     <div class="stats-col">
                         <span class="stat-item">105.378M+ Visits Contributed</span>
@@ -1392,6 +1857,33 @@
             </div>
             <div class="section-title"><i class="fa-solid fa-star"></i> Projects</div><div class="grid" id="cazu-grid"></div>
             <div class="section-title"><i class="fa-solid fa-code"></i> Contributions</div><div class="grid" id="cazu-contribs"></div>
+        </div>
+
+        <div id="brimo" class="page">
+            <img src="" class="profile-banner" id="banner-brimo" loading="lazy" decoding="async">
+            <div class="profile-hero">
+                <div class="pfp-box">
+                    <img src="" class="pfp-img" loading="lazy" decoding="async">
+                    <div class="status-badge" id="status-brimo"></div>
+                </div>
+                <div class="user-info">
+                    <div class="hero-status"><span class="status-dot"></span> Available for work</div>
+                    <h1>Brimo</h1>
+                    <p class="hero-blurb">Crafting digital experiences for Arata Interactive.</p>
+                    <div class="stats-col">
+                        <span class="stat-item">Support</span>
+                    </div>
+                    <div class="socials-row">
+                        <a href="https://discord.com/users/1208746523232440381" target="_blank" class="social-btn round"><i class="fa-brands fa-discord"></i></a>
+                    </div>
+                    <div id="rp-brimo" class="rp-card" style="display:none;">
+                        <div class="rp-image-box"><img id="rp-img-brimo" class="rp-large" loading="lazy" decoding="async"><img id="rp-small-brimo" class="rp-small" style="display:none;" loading="lazy" decoding="async"></div>
+                        <div class="rp-details"><div class="rp-name" id="rp-name-brimo">Playing</div><div class="rp-state" id="rp-details-brimo"></div><div class="rp-time" id="rp-state-brimo"></div></div>
+                    </div>
+                </div>
+            </div>
+            <div class="section-title"><i class="fa-solid fa-star"></i> Projects</div><div class="grid" id="brimo-grid"></div>
+            <div class="section-title"><i class="fa-solid fa-code"></i> Contributions</div><div class="grid" id="brimo-contribs"></div>
         </div>
     </main>
 
@@ -1430,7 +1922,8 @@
             k: '763509084640378951',
             zero: '787335998404689941',
             aizen: '1326320004215472158',
-            eli: '963116717213626479'
+            eli: '963116717213626479',
+            brimo: '1208746523232440381'
         };
 
         const defaultBanners = {
@@ -1442,8 +1935,33 @@
             k: "https://media.discordapp.net/attachments/1453547166336286771/1467400537203933387/Rintarro_okabe.png?ex=6981903f&is=69803ebf&hm=7329576c39eca99247c477b4a706f9fc8af4fd36726ccac8ad1b6ab5107e6a28&=&format=webp&quality=lossless&width=1872&height=749",
             zero: "https://images-ext-1.discordapp.net/external/xRvzkawBo6Z4A_VSj313IzUJubFD7ES9C96uxJozmFw/%3Fsize%3D4096/https/cdn.discordapp.com/banners/787335998404689941/a_f499069a8608be943f4d56f329eac0da.gif",
             aizen: "https://media.discordapp.net/attachments/1447606476578230306/1467447535160266772/77E042D5-4402-456F-B72E-246F5477F137.gif?ex=69806a84&is=697f1904&hm=ba1e7f18ab50c8d99e6835ce40a4b087c94e2be93ec6ec0aa1ef9bb170742c53&=",
-            eli: "https://cdn.discordapp.com/attachments/1456331351858090236/1467515681800060928/a_d916e0bf7d62d6b11ea0d3df8a126868.gif?ex=698152bb&is=6980013b&hm=db538f3ccc1eedf26cf5c7c91c7b870457c4ab742e34e23e5133cee8ca59427e&"
+            eli: "https://cdn.discordapp.com/attachments/1456331351858090236/1467515681800060928/a_d916e0bf7d62d6b11ea0d3df8a126868.gif?ex=698152bb&is=6980013b&hm=db538f3ccc1eedf26cf5c7c91c7b870457c4ab742e34e23e5133cee8ca59427e&",
+            brimo: "https://media.discordapp.net/attachments/1447622830740213870/1468473478314197043/Princess_.jpg?ex=69842600&is=6982d480&hm=8b5225e37c27dc126c597cb3994b84fcc6f2f91113356c617f032ee100235bc1&=&format=webp"
         };
+
+        const fallbackAvatar = "https://cdn.discordapp.com/embed/avatars/0.png";
+
+        function setImgSafe(imgEl, src, fallback = fallbackAvatar) {
+            if (!imgEl || !src) return;
+            if (imgEl.dataset && imgEl.dataset.src === src) return;
+            if (imgEl.dataset) imgEl.dataset.src = src;
+            imgEl.onerror = () => {
+                if (fallback && imgEl.src !== fallback) imgEl.src = fallback;
+            };
+            imgEl.src = src;
+        }
+
+        function applyDefaultVisuals() {
+            Object.keys(userIds).forEach((key) => {
+                const pfpEl = document.querySelector(`#${key} .pfp-img`);
+                if (pfpEl) setImgSafe(pfpEl, fallbackAvatar, fallbackAvatar);
+
+                const bannerEl = document.getElementById(`banner-${key}`);
+                if (bannerEl && defaultBanners[key]) {
+                    setImgSafe(bannerEl, defaultBanners[key], defaultBanners[key]);
+                }
+            });
+        }
 
         const themeColors = {
             ren: '56, 189, 248',
@@ -1455,18 +1973,20 @@
             zero: '229, 229, 229',
             aizen: '147, 51, 234',
             eli: '100, 210, 255',
+            brimo: '125, 211, 252',
             home: '255, 255, 255'
         };
 
         const songs = {
-            ren: { title: "Mama's Boy", artist: "Dominic Fike", url: "https://cdn.discordapp.com/attachments/886450143354843146/1467816596046221322/Dominic_Fike_-_Mamas_Boy_Official_Video_-_Dominic_Fike_720p_h264_youtube.mp4?ex=6981c23b&is=698070bb&hm=4d2d5082a4c5664e40a3748305f6339c70ddbce4c2b0c53728179564050a8edb&" },
-            m1: { title: "Asphyxia", artist: "Cö shu Nie", url: "https://cdn.discordapp.com/attachments/886450143354843146/1467816312792285265/Co_shu_Nie_-_Asphyxia_-_coshunieVEVO_720p_h264_youtube.mp4?ex=6981c1f7&is=69807077&hm=0a0bfa1bdb0a202224dfdd93015236461280fb3da195756d52e7fe9b8935d49d&" },
-            home: { title: "Home", artist: "Jacal", url: "https://cdn.discordapp.com/attachments/1453547166336286771/1467811620838441081/when_a_guitar_riff_hits_you_so_hard_that_you_start_to_tear_up_full_version_-_jacal_720p_h264_youtube.mp4?ex=6981bd99&is=69806c19&hm=64de1c650f6860f9e35cd4de38d2e55b396b12bc6d32a56eb466f27568721f70&" }, 
-            lummy: { title: "Jane", artist: "The Long Faces", url: "https://cdn.discordapp.com/attachments/886450143354843146/1467816146630873088/Jane_-_The_Long_Faces_720p_h264_youtube.mp4?ex=6981c1d0&is=69807050&hm=1a1cec82d03143b4c7532c330e356246f2b0a524ac7a87971019675def075438&" },
-            sleepy: { title: "Picasso", artist: "Werenoi", url: "https://cdn.discordapp.com/attachments/886450143354843146/1467816285483307101/Werenoi_-_Picasso_Visualizer_-_Werenoi_1080p_h264_youtube.mp4?ex=6981c1f1&is=69807071&hm=1ee5e389e03b64b78aae16f40d52b5710cf7f28e6e23f5111fa9c78a91162cb7&" },
-            cazu: { title: "Homesick", artist: "Wave to Earth", url: "https://cdn.discordapp.com/attachments/886450143354843146/1467816042725245070/wave_to_earth_-_homesick_Official_Lyric_Video_-_wave_to_earth_720p_h264_youtube.mp4?ex=6981c1b7&is=69807037&hm=9641ca8714a65ebf41aaf21388ad7408b975e9450d6f83b6cbdc461648c8977f&" },
-            aizen: { title: "Golden Brown", artist: "The Stranglers", url: "https://cdn.discordapp.com/attachments/886450143354843146/1467957396897792173/The_Stranglers_-_Golden_Brown_-_stranglersofficial_480p_h264_youtube.mp4?ex=6982455c&is=6980f3dc&hm=f61f047aec2bd2378b23f1d9dcfa58366a0efa8b4a22c063d5ff5264e7240f69&", start: 166 },
-            eli: { title: "The Honored One", artist: "Gojo Satoru", url: "https://cdn.discordapp.com/attachments/886450143354843146/1467803396189982720/Gojo_Satoru_-_The_Honored_One_Jujutsu_Kaisen_Season_2_OST_-_Normaneverland_720p_h264_youtube.mp4?ex=6981b5f0&is=69806470&hm=a597268c8ed9a38d9a01c1b7b824bc9f51d5885ae7d2aec28289b51bbe41bc1f&" }
+            ren: { title: "Mama's Boy", artist: "Dominic Fike", url: "https://cdn.discordapp.com/attachments/886450143354843146/1467816596046221322/Dominic_Fike_-_Mamas_Boy_Official_Video_-_Dominic_Fike_720p_h264_youtube.mp4?ex=6983bc7b&is=69826afb&hm=9c1c131390a87a98b32044aac496990f7aa5236309ae744de0afffe451d0d612&" },
+            m1: { title: "Asphyxia", artist: "Cö shu Nie", url: "https://cdn.discordapp.com/attachments/886450143354843146/1467816312792285265/Co_shu_Nie_-_Asphyxia_-_coshunieVEVO_720p_h264_youtube.mp4?ex=6983bc37&is=69826ab7&hm=410f5647cbccb6e7556b9cc1f7ec830abf07abbe6f31e64ead7686b13708dd74&" },
+            home: { title: "Home", artist: "Jacal", url: "https://cdn.discordapp.com/attachments/1453547166336286771/1467811620838441081/when_a_guitar_riff_hits_you_so_hard_that_you_start_to_tear_up_full_version_-_jacal_720p_h264_youtube.mp4?ex=6983b7d9&is=69826659&hm=5adf5ddd576e7b0bed7ed287f75785dc9c570a6b6c49756e01bd022e4b101b1d&" },
+            lummy: { title: "Jane", artist: "The Long Faces", url: "https://cdn.discordapp.com/attachments/886450143354843146/1467816146630873088/Jane_-_The_Long_Faces_720p_h264_youtube.mp4?ex=6983bc10&is=69826a90&hm=4e9eb77be959a1f7000b18222aca8766a498510fbe7dfd7c71f223d2188f57b2&" },
+            sleepy: { title: "Picasso", artist: "Werenoi", url: "https://cdn.discordapp.com/attachments/886450143354843146/1467816285483307101/Werenoi_-_Picasso_Visualizer_-_Werenoi_1080p_h264_youtube.mp4?ex=6983bc31&is=69826ab1&hm=41726290c08d406f059fffb31552e89822cd64bc0fc07f22d3ec0e08bb29a1d7&" },
+            cazu: { title: "Homesick", artist: "Wave to Earth", url: "https://cdn.discordapp.com/attachments/886450143354843146/1467957368867520694/wave_to_earth_-_homesick_Official_Lyric_Video_-_wave_to_earth_720p_h264_youtube.mp4?ex=698396d6&is=69824556&hm=0cd8072731b02b3098fd719f0289b680447c7940bdf8921cd5a99107912853ad&" },
+            aizen: { title: "Golden Brown", artist: "The Stranglers", url: "https://cdn.discordapp.com/attachments/886450143354843146/1467957396897792173/The_Stranglers_-_Golden_Brown_-_stranglersofficial_480p_h264_youtube.mp4?ex=698396dc&is=6982455c&hm=2de8faf3bb78f1cf711c3932a1bb4982d098d07bfd7f66dc45a9d8fbd7ba88d3&", start: 166 },
+            eli: { title: "The Honored One", artist: "Gojo Satoru", url: "https://cdn.discordapp.com/attachments/886450143354843146/1467803396189982720/Gojo_Satoru_-_The_Honored_One_Jujutsu_Kaisen_Season_2_OST_-_Normaneverland_720p_h264_youtube.mp4?ex=6983b030&is=69825eb0&hm=a75fe4202a86463ca884ccf709af9d25f23d55f1afca73b295f1b538094bd57d&" },
+            brimo: { title: "GET IN THE RING", artist: "Max", url: "https://cdn.discordapp.com/attachments/886450143354843146/1468495732670468118/videoplayback_19.mp4?ex=69843aba&is=6982e93a&hm=40970ae05c56d1f69954e8e552371b35f348c2b9466d310ced6982b2fdaa7d81&" }
         };
 
         let partners = [
@@ -1476,17 +1996,17 @@
         let partnerText = "Want to collaborate? DM the <span class=\"p-highlight\">Manager</span> or any of the <span class=\"p-highlight\">@Arata Founders</span> inside our Discord.";
 
         const zeroSongs = [
-            { title: "Weakest VS Strongest", artist: "Academy City", url: "https://cdn.discordapp.com/attachments/1453951035877097554/1467465347899592756/A_Certain_Scientific_Railgun_S_OST_2_Weakest_VS_Strongest_-_Kakine_Teitoku_720p_h264_youtube.mp4?ex=69807b1b&is=697f299b&hm=37746d62ca12d4735cc6b33f48adbdac65e93f56bf422628d14fafc82a23dd28&" },
-            { title: "ROAR", artist: "Official", url: "https://cdn.discordapp.com/attachments/1453951035877097554/1467466366289449106/ROAROfficial_MV_-_Official_YouTube_Channel_720p_h264_youtube.mp4?ex=6981cd8d&is=69807c0d&hm=806dd4a80c9512f1e5c19f67f6e6e02c95467b7320e18132f011288e3e6e7766&" }
+            { title: "Weakest VS Strongest", artist: "Academy City", url: "https://cdn.discordapp.com/attachments/886450143354843146/1467962705607528642/A_Certain_Scientific_Railgun_S_OST_2_Weakest_VS_Strongest_-_Kakine_Teitoku_720p_h264_youtube.mp4?ex=69839bce&is=69824a4e&hm=3603772f93567667cc90471fc8cde5850ca239c877ccd23ab60f1567ce2cf1e3&" },
+            { title: "ROAR", artist: "Official", url: "https://cdn.discordapp.com/attachments/1453951035877097554/1467946453447086222/ROAROfficial_MV_-_Official_YouTube_Channel_720p_h264_youtube.mp4?ex=69838cab&is=69823b2b&hm=97d247193f361959f482a1f3dad37ed90d522a488feab113e5657662d40ee116&" }
         ];
 
         const kSongs = [
-            { title: "Town, Flow of Time, People", artist: "Clannad", url: "https://cdn.discordapp.com/attachments/1453547166336286771/1467972001393279036/Clannad_-_Town_Flow_of_Time_People_-_Ben_Booze_480p_h264_youtube.mp4?ex=698252f6&is=69810176&hm=cfffaa08a65d1884d596723efd5446a20d931b7909a821ed03f36d888e19ab28&" },
-            { title: "GATE OF STEINER", artist: "Steins;Gate", url: "https://cdn.discordapp.com/attachments/1453547166336286771/1467972002185871573/GATE_OF_STEINER_-Piano-_-_Takeshi_Abo_720p_h264_youtube.mp4?ex=698252f6&is=69810176&hm=70d3bf41e94439e013d1fdcfe147a9e0f07480600e4e436f6bbb08afa6d451ad&" },
-            { title: "Chainsaw Man - Trailer OST", artist: "Official", url: "https://cdn.discordapp.com/attachments/886450143354843146/1467950529664651354/Chainsaw_Man_-_Trailer_OST_Extended_-_Sacha_720p_h264_youtube.mp4?ex=69823ef7&is=6980ed77&hm=1e8c81d1521442f01c14b51a9d63210490439533a2debcde7b0e2f9a3c3e9acc&", start: 50 }
+            { title: "Chainsaw Man - Trailer OST", artist: "Sacha", url: "https://cdn.discordapp.com/attachments/886450143354843146/1467955033676054548/Chainsaw_Man_-_Trailer_OST_Extended_-_Sacha_720p_h264_youtube.mp4?ex=698394a9&is=69824329&hm=0a43120d87e7c696761abfb13e588b27ff424b270b210eedcc1fd8e3c4bc555f&", start: 50 },
+            { title: "GATE OF STEINER", artist: "Steins;Gate", url: "https://cdn.discordapp.com/attachments/1453547166336286771/1467972002185871573/GATE_OF_STEINER_-Piano-_-_Takeshi_Abo_720p_h264_youtube.mp4?ex=6983a476&is=698252f6&hm=c6904ebcb521b9c91e982341e3ced3b9d77854ae3b4e7ce4afa1a0ed92074ee2&" },
+            { title: "Town, Flow of Time, People", artist: "Clannad", url: "https://cdn.discordapp.com/attachments/1453547166336286771/1467972001393279036/Clannad_-_Town_Flow_of_Time_People_-_Ben_Booze_480p_h264_youtube.mp4?ex=6983a476&is=698252f6&hm=12fdea1ad833bbc649ab7a21feb08849c57d2fd0061b769ec1fb881ae10ff859&" }
         ];
 
-        const kRare = { title: "TALAHON-GHOUL", artist: "Joseph Stakoz Yoresh", url: "https://cdn.discordapp.com/attachments/1453547166336286771/1467972003137851637/TALAHON-GHOUL_Episode_1.mp4?ex=698252f7&is=69810177&hm=53563ade7d4359bac4bd3d00344f3ac589b8419de859444e74dc6c865a27582f&" };
+        const kRare = { title: "TALAHON-GHOUL", artist: "Joseph Stakoz Yoresh", url: "https://cdn.discordapp.com/attachments/1453547166336286771/1467972003137851637/TALAHON-GHOUL_Episode_1.mp4?ex=6983a477&is=698252f7&hm=f29da2ee72ed0136385e427eef5a4920cfd442ac07e7a18549ed656fa059efc7&" };
 
         const arataData = {
             title: "ARATA", play: "https://www.roblox.com/games/98861725687885/ARATA", discord: "https://discord.gg/arata",
@@ -1625,6 +2145,13 @@
                     { title: "Ends of The Earth", discord: "https://discord.gg/BWgcqRpZJF", icon: "placeholder", banner: "placeholder", images: ["placeholder"] },
                     { title: "Classic Battlegrounds", discord: "https://discord.gg/vkA2mnm32J", icon: "placeholder", banner: "placeholder", images: ["placeholder"] }
                 ]
+            },
+            brimo: {
+                main: [
+                    { title: "Realm Clash", discord: "https://discord.gg/NG52Kqd5", icon: "placeholder", banner: "placeholder", images: ["placeholder"] },
+                    { title: "Sorcerer Unleashed", discord: "https://discord.gg/9j2ddqHs", icon: "placeholder", banner: "placeholder", images: ["placeholder"] }
+                ],
+                contribs: []
             }
         };
 
@@ -1723,7 +2250,8 @@
                 sleepy: "Sleepy",
                 cazu: "Cazu",
                 aizen: "Aizen",
-                eli: "Eli"
+                eli: "Eli",
+                brimo: "Brimo"
             };
             Object.keys(database).forEach(key => {
                 database[key].contribs.forEach(item => {
@@ -1770,7 +2298,7 @@
 
         function scrollToSection(id) {
             const target = document.getElementById(id);
-            if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+            if (target) target.scrollIntoView({ behavior: "auto", block: "start" });
         }
         
         function generateDynamicArt(title, type) {
@@ -1823,6 +2351,7 @@
         renderFeatured();
         renderCreators();
         renderDuplicates();
+        applyDefaultVisuals();
         updateFeaturedStats();
 
         function updateHomeStats() {
@@ -1886,6 +2415,7 @@
                 dHtml += `<div class="dd-item" onclick="tab('lummy')">LummY</div>`;
                 dHtml += `<div class="dd-item" onclick="tab('sleepy')">Sleepy</div>`;
                 dHtml += `<div class="dd-item" onclick="tab('cazu')">Cazu</div>`;
+                dHtml += `<div class="dd-item" onclick="tab('brimo')">Brimo</div>`;
                 dHtml += '</div>';
 
                 dirList.innerHTML = dHtml;
@@ -1954,15 +2484,10 @@
             if(btn) btn.classList.add('active');
             else if (t === 'home') document.querySelectorAll('.nav-btn')[0].classList.add('active');
             
-            trailColor = themeColors[t] || '255, 255, 255';
-            document.documentElement.style.setProperty('--current-accent', `rgb(${trailColor})`);
-            
-            const overlay = document.getElementById('colorOverlay');
-            if(t !== 'home') {
-                overlay.style.background = `radial-gradient(circle at center, rgba(${trailColor}, 0.12) 0%, rgba(5,5,5,0.92) 100%)`;
-            } else {
-                overlay.style.background = '#050505';
-            }
+            const preset = getPresetById(selectedHomeTheme);
+            applyHomeTheme(preset);
+            setActiveSwatch(selectedHomeTheme);
+            trailColor = preset.accent;
 
             if(t === 'zero') {
                  const randSong = zeroSongs[Math.floor(Math.random() * zeroSongs.length)];
@@ -2095,13 +2620,13 @@
                         if(!pfpUrl) pfpUrl = "https://cdn.discordapp.com/embed/avatars/0.png";
 
                         const pfpEl = document.querySelector(`#${key} .pfp-img`);
-                        if(pfpEl && pfpUrl && pfpEl.src !== pfpUrl) {
-                            pfpEl.src = pfpUrl;
+                        if(pfpEl && pfpUrl) {
+                            setImgSafe(pfpEl, pfpUrl, fallbackAvatar);
                         }
 
                         const creatorImg = document.querySelector(`.creator-avatar[data-creator-key="${key}"]`);
-                        if (creatorImg && pfpUrl && creatorImg.src !== pfpUrl) {
-                            creatorImg.src = pfpUrl;
+                        if (creatorImg && pfpUrl) {
+                            setImgSafe(creatorImg, pfpUrl, fallbackAvatar);
                         }
 
                         const bannerEl = document.getElementById(`banner-${key}`);
@@ -2111,21 +2636,18 @@
                                 const bUrl = `https://cdn.discordapp.com/banners/${d.discord_user.id}/${d.discord_user.banner}.${ext}?size=4096`;
                                 if(!bannerEl.src.includes(d.discord_user.banner)) bannerEl.src = bUrl;
                             } else {
-                                if(!bannerEl.src.includes("discordapp") && !bannerEl.src.includes(defaultBanners[key])) {
-                                    bannerEl.src = defaultBanners[key];
-                                }
-                                if(!d.discord_user.banner && defaultBanners[key] && !bannerEl.src.includes(defaultBanners[key].substring(0,20))) {
-                                    bannerEl.src = defaultBanners[key];
+                                if(defaultBanners[key]) {
+                                    setImgSafe(bannerEl, defaultBanners[key], defaultBanners[key]);
                                 }
                             }
                         }
 
                         const navBtnImg = document.querySelector(`#nav-${key} img`);
-                        if(navBtnImg && pfpUrl && navBtnImg.src !== pfpUrl && (key === 'zero' || key === 'aizen')) {
-                             navBtnImg.src = pfpUrl;
+                        if(navBtnImg && pfpUrl && (key === 'zero' || key === 'aizen')) {
+                             setImgSafe(navBtnImg, pfpUrl, fallbackAvatar);
                         } else if(navBtnImg && d.discord_user.avatar && key !== 'zero' && key !== 'aizen') {
                              const nUrl = `https://cdn.discordapp.com/avatars/${d.discord_user.id}/${d.discord_user.avatar}.png?size=128`;
-                             if(navBtnImg.src !== nUrl) navBtnImg.src = nUrl;
+                             setImgSafe(navBtnImg, nUrl, fallbackAvatar);
                         }
 
                         const handleEl = document.querySelector(`.creator-handle[data-discord-handle="${key}"]`);
@@ -2179,14 +2701,21 @@
         }
         function slide(d) { idx = (idx + d + imgs.length) % imgs.length; updateGal(); }
         function closeModal() { document.getElementById('modal').classList.remove('open'); }
-        tab('home');
-
+        window.addEventListener('DOMContentLoaded', () => {
+            document.body.classList.remove('loading');
+        });
         window.addEventListener('load', () => {
             document.body.classList.remove('loading');
         });
+        setTimeout(() => {
+            document.body.classList.remove('loading');
+        }, 2000);
 
         const topBar = document.querySelector('.top-bar');
         const topToggle = document.getElementById('topbar-toggle');
+        const themeToggle = document.getElementById('theme-toggle');
+        const themePanel = document.getElementById('theme-panel');
+        const themeGrid = document.getElementById('theme-grid');
         let topHidden = false;
         if (topToggle && topBar) {
             topToggle.addEventListener('click', () => {
@@ -2194,11 +2723,74 @@
                 topBar.classList.toggle('is-hidden', topHidden);
             });
         }
+        if (themeToggle && themePanel) {
+            themeToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                themePanel.classList.toggle('open');
+            });
+            document.addEventListener('click', () => themePanel.classList.remove('open'));
+            themePanel.addEventListener('click', (e) => e.stopPropagation());
+        }
         window.addEventListener('scroll', () => {
             if (!topBar) return;
-            const shouldCompact = window.scrollY > 40;
-            topBar.classList.toggle('is-compact', shouldCompact);
+            topBar.classList.remove('is-compact');
         });
+
+        const themePresets = [
+            { id: "midnight", name: "Midnight", accent: "99, 102, 241", bg: "#07090f", overlay: ["rgba(64, 80, 255, 0.08)", "rgba(10, 12, 22, 0.9)"] },
+            { id: "crimson", name: "Crimson", accent: "239, 68, 68", bg: "#0a0707", overlay: ["rgba(239, 68, 68, 0.12)", "rgba(12, 8, 8, 0.92)"] },
+            { id: "steel", name: "Steelwave", accent: "56, 189, 248", bg: "#06090c", overlay: ["rgba(56, 189, 248, 0.12)", "rgba(7, 10, 14, 0.92)"] },
+            { id: "ocean", name: "Ocean", accent: "34, 197, 94", bg: "#07100c", overlay: ["rgba(34, 197, 94, 0.12)", "rgba(6, 12, 9, 0.92)"] },
+            { id: "violet", name: "Violet", accent: "147, 51, 234", bg: "#0a0710", overlay: ["rgba(147, 51, 234, 0.12)", "rgba(10, 6, 14, 0.92)"] },
+            { id: "ember", name: "Ember", accent: "251, 146, 60", bg: "#100a06", overlay: ["rgba(251, 146, 60, 0.12)", "rgba(12, 8, 5, 0.92)"] }
+        ];
+        const THEME_STORAGE_KEY = "arataThemePreset";
+        const baseBgDark = getComputedStyle(document.documentElement).getPropertyValue('--bg-dark').trim() || "#07090f";
+        let selectedHomeTheme = localStorage.getItem(THEME_STORAGE_KEY) || themePresets[0].id;
+        const getPresetById = (id) => themePresets.find(p => p.id === id) || themePresets[0];
+        function applyHomeTheme(preset) {
+            if (!preset) return;
+            document.documentElement.style.setProperty('--accent-rgb', preset.accent);
+            document.documentElement.style.setProperty('--current-accent', `rgb(${preset.accent})`);
+            document.documentElement.style.setProperty('--bg-dark', preset.bg);
+            const overlay = document.getElementById('colorOverlay');
+            if (overlay) {
+                overlay.style.background = `radial-gradient(circle at center, ${preset.overlay[0]} 0%, ${preset.overlay[1]} 100%)`;
+            }
+        }
+        function applyNonHomeTheme(rgb) {
+            document.documentElement.style.setProperty('--accent-rgb', rgb);
+            document.documentElement.style.setProperty('--current-accent', `rgb(${rgb})`);
+            document.documentElement.style.setProperty('--bg-dark', baseBgDark);
+        }
+        function setActiveSwatch(id) {
+            if (!themeGrid) return;
+            themeGrid.querySelectorAll('.theme-swatch').forEach(s => s.classList.toggle('active', s.dataset.theme === id));
+        }
+        if (themeGrid) {
+            themeGrid.innerHTML = themePresets.map((p, idx) => `
+                <div class="theme-swatch ${idx === 0 ? 'active' : ''}" data-theme="${p.id}" style="background: linear-gradient(135deg, rgba(${p.accent}, 0.18), rgba(255,255,255,0.03));">
+                    ${p.name}
+                </div>
+            `).join('');
+            themeGrid.querySelectorAll('.theme-swatch').forEach(swatch => {
+                swatch.addEventListener('click', () => {
+                    const preset = themePresets.find(p => p.id === swatch.dataset.theme);
+                    if (!preset) return;
+                    selectedHomeTheme = preset.id;
+                    localStorage.setItem(THEME_STORAGE_KEY, preset.id);
+                    setActiveSwatch(preset.id);
+                    if (currentTheme === 'home') {
+                        applyHomeTheme(preset);
+                    }
+                });
+            });
+            setActiveSwatch(selectedHomeTheme);
+        }
+        if (currentTheme === 'home') {
+            applyHomeTheme(getPresetById(selectedHomeTheme));
+        }
+        tab('home');
 
         const applyForm = document.getElementById('apply-form');
         const applyStatus = document.getElementById('apply-status');
@@ -2226,6 +2818,48 @@
             }
         });
         }
+
+        const revealEls = document.querySelectorAll('.reveal');
+        if (revealEls.length) {
+            const revealObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-visible');
+                    } else {
+                        entry.target.classList.remove('is-visible');
+                    }
+                });
+            }, { threshold: 0.15 });
+            revealEls.forEach(el => revealObserver.observe(el));
+        }
+
+        const productTabs = document.querySelectorAll('.products-tab');
+        const productPanels = document.querySelectorAll('[data-panel]');
+        if (productTabs.length) {
+            productTabs.forEach(tabBtn => {
+                tabBtn.addEventListener('click', () => {
+                    const target = tabBtn.dataset.tab;
+                    productTabs.forEach(t => t.classList.toggle('active', t === tabBtn));
+                    productPanels.forEach(p => {
+                        const match = p.dataset.panel === target;
+                        p.hidden = !match;
+                    });
+                });
+            });
+        }
+
+        document.querySelectorAll('.product-media video').forEach(video => {
+            video.addEventListener('mouseenter', () => {
+                video.play().catch(() => {});
+            });
+            video.addEventListener('mouseleave', () => {
+                video.pause();
+            });
+            video.addEventListener('touchstart', () => {
+                if (video.paused) video.play().catch(() => {});
+                else video.pause();
+            }, { passive: true });
+        });
 
         // 3D Tilting Effect Logic
         document.querySelectorAll('.card, .pfp-box, .game-icon-main, .mp-content').forEach(el => {

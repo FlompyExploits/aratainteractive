@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Apply — Arata Interactive</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #07090f;
+      --bg-deep: #05060b;
+      --glass: rgba(16, 18, 26, 0.78);
+      --glass-border: rgba(255,255,255,0.08);
+      --text-soft: #9aa3ad;
+      --accent: #8b5cf6;
+      --accent-2: #22d3ee;
+      --glow: 0 30px 80px rgba(0,0,0,0.45);
+      --ease: cubic-bezier(0.18, 0.98, 0.2, 1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Sora', sans-serif;
+      color: #e9edf1;
+      background:
+        radial-gradient(1200px 800px at 20% 10%, rgba(139, 92, 246, 0.12), transparent 60%),
+        radial-gradient(900px 900px at 80% 30%, rgba(34, 211, 238, 0.12), transparent 60%),
+        linear-gradient(180deg, var(--bg-dark), var(--bg-deep));
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 40px 20px;
+    }
+
+    .page { max-width: 1100px; margin: 0 auto; width: 100%; }
+
+    .top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 40px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .brand .logo {
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      background: #fff;
+      color: #000;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+    }
+
+    .hero { text-align: center; margin-bottom: 30px; }
+    .hero h1 { font-size: clamp(2rem, 4vw, 3.2rem); font-family: 'Space Grotesk', sans-serif; margin-bottom: 10px; }
+    .hero p { color: var(--text-soft); }
+
+    .apply-card {
+      margin-top: 24px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 24px;
+      padding: 26px;
+      box-shadow: var(--glow);
+    }
+
+    .apply-roles {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      margin: 16px 0 6px 0;
+    }
+    .apply-role {
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      font-size: 0.85rem;
+    }
+
+    .apply-warning {
+      margin: 8px 0 16px;
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.6);
+      text-align: center;
+    }
+
+    form {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #fff;
+      border-radius: 14px;
+      padding: 12px 14px;
+      font-size: 0.95rem;
+    }
+    textarea { min-height: 120px; grid-column: 1 / -1; resize: vertical; }
+    .full { grid-column: 1 / -1; }
+
+    .select-wrap {
+      position: relative;
+      width: 100%;
+      grid-column: 1 / -1;
+    }
+    .select-wrap select {
+      appearance: none;
+      -webkit-appearance: none;
+      background: #0b0d12;
+      border: 1px solid rgba(255,255,255,0.12);
+      padding-right: 44px;
+      cursor: pointer;
+    }
+    .select-wrap::after {
+      content: "▾";
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: rgba(255,255,255,0.7);
+      pointer-events: none;
+      font-size: 0.9rem;
+    }
+
+    .btn-neo {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 12px 20px;
+        border-radius: 999px;
+        border: 1px solid rgba(255,255,255,0.12);
+      background:
+        radial-gradient(120% 120% at 30% 20%, rgba(255,255,255,0.25), rgba(255,255,255,0) 60%),
+        linear-gradient(135deg, rgba(139, 92, 246, 0.6), rgba(34, 211, 238, 0.45));
+      color: #fff;
+        font-weight: 700;
+        transition: transform .25s var(--ease), box-shadow .25s var(--ease), filter .25s var(--ease);
+        box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+        text-decoration: none;
+        cursor: pointer;
+    }
+    .btn-neo:hover { transform: translateY(-2px); filter: brightness(1.05); }
+
+    .btn-ghost {
+        background: transparent;
+        border: 1px solid rgba(255,255,255,0.15);
+        color: #fff;
+        padding: 10px 16px;
+        border-radius: 999px;
+        cursor: pointer;
+        text-decoration: none;
+    }
+
+    @media (max-width: 900px) {
+      form { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="top">
+      <div class="brand">
+        <div class="logo">A</div>
+        ARATA INTERACTIVE
+      </div>
+      <a href="index.html" class="btn-ghost">Back Home</a>
+    </div>
+
+    <div class="hero">
+      <h1>Wanna join Arata Interactive?</h1>
+      <p>All positions are open right now except Manager. Apply below.</p>
+      <div class="apply-roles">
+        <span class="apply-role">Programmer</span>
+        <span class="apply-role">QA</span>
+        <span class="apply-role">VFX</span>
+        <span class="apply-role">UI/UX</span>
+        <span class="apply-role">Animator</span>
+        <span class="apply-role">Map Designer</span>
+        
+      </div>
+      <div class="apply-warning">Please do not send us a joke message!</div>
+    </div>
+
+    <div class="apply-card">
+      <form id="apply-form">
+        <input name="name" placeholder="Alias / Name" required />
+        <input name="email" type="email" placeholder="Email" required />
+        <input name="discord_username" placeholder="Discord Username" />
+        <input name="discord_id" placeholder="Discord ID (Optional)" />
+        <div class="select-wrap full">
+          <select name="position" required>
+            <option value="Programmer">Programmer</option>
+            <option value="QA">QA</option>
+            <option value="VFX">VFX</option>
+            <option value="UI/UX">UI/UX</option>
+            <option value="Animator">Animator</option>
+            <option value="Map Designer">Map Designer</option>
+          </select>
+        </div>
+        <textarea name="message" placeholder="Tell us about your experience..." required></textarea>
+        <label class="full" style="display:block;">
+          <span style="display:block; color: rgba(255,255,255,0.7); font-size:0.85rem; margin-bottom:8px;">Select your resume (PDF only)</span>
+          <input type="file" name="resume" accept=".pdf" required />
+        </label>
+        <button type="submit" class="btn-neo full">Submit Application</button>
+        <div id="apply-status" class="full" style="text-align:center; color: #aaa;"></div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const APPLY_ENDPOINT = "https://aratainteractive.onrender.com/apply";
+    const applyForm = document.getElementById("apply-form");
+    const applyStatus = document.getElementById("apply-status");
+    const trollTerms = [
+      "troll", "test", "fake", "lol", "lmao", "idk", "asdf", "qwerty",
+      "not showing up in any search results", "google, yahoo, or bing",
+      "seo", "search results", "keywords related to your company"
+    ];
+
+    applyForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      applyStatus.textContent = "Sending application...";
+      try {
+        const name = (applyForm.elements.name?.value || "").trim().toLowerCase();
+        const email = (applyForm.elements.email?.value || "").trim().toLowerCase();
+        const discord = (applyForm.elements.discord_username?.value || "").trim().toLowerCase();
+        const message = (applyForm.elements.message?.value || "").trim().toLowerCase();
+        const isTroll = trollTerms.some(t => name.includes(t) || discord.includes(t) || message.includes(t));
+        if (isTroll || message.length < 10) {
+          applyStatus.textContent = "Please submit a serious application.";
+          return;
+        }
+        if (!email.includes("@") || !email.includes(".")) {
+          applyStatus.textContent = "Please enter a valid email.";
+          return;
+        }
+        const formData = new FormData(applyForm);
+        const res = await fetch(APPLY_ENDPOINT, { method: "POST", body: formData });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.error || "Failed");
+        applyForm.reset();
+        applyStatus.textContent = "Application submitted! Expect a response soon.";
+      } catch (err) {
+        applyStatus.textContent = "Failed to submit application.";
+      }
+    });
+  </script>
+</body>
+</html>
