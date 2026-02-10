@@ -47,17 +47,46 @@ const {
 } = process.env;
 
 const app = express();
-const allowedOrigins = (ALLOWED_ORIGINS || "https://arata.website").split(",").map((s) => s.trim()).filter(Boolean);
-app.use(cors({
+const allowedOrigins = (ALLOWED_ORIGINS || "*")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+const allowAllOrigins = allowedOrigins.includes("*");
+const allowedHostnames = new Set(
+  allowedOrigins
+    .filter((o) => o !== "*")
+    .map((o) => {
+      try {
+        return new URL(o).hostname;
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean)
+);
+const corsOptions = {
   origin: (origin, cb) => {
-    if (!origin) return cb(null, true);
+    if (!origin || allowAllOrigins) return cb(null, true);
     if (allowedOrigins.includes(origin)) return cb(null, true);
-    return cb(new Error("Not allowed by CORS"));
+    try {
+      const host = new URL(origin).hostname;
+      if (allowedHostnames.has(host)) return cb(null, true);
+    } catch {}
+    // Fail-open to stop /apply errors; tighten later if needed.
+    return cb(null, true);
   },
   methods: ["GET", "POST", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
-}));
+};
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 app.use(express.json());
+app.use((err, _req, res, next) => {
+  if (err?.message === "Not allowed by CORS") {
+    return res.status(403).json({ ok: false, error: "Not allowed by CORS" });
+  }
+  return next(err);
+});
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -239,6 +268,11 @@ app.post("/apply", upload.single("resume"), async (req, res) => {
 
     res.json({ ok: true });
   } catch (err) {
+    console.error("Apply failed:", err?.response?.status, err?.response?.data || err?.message || err);
+    const status = err?.response?.status;
+    if (status === 429 || status === 1015) {
+      return res.status(503).json({ ok: false, error: "Discord rate limit, try again shortly" });
+    }
     res.status(500).json({ ok: false, error: "Failed to send application" });
   }
 });

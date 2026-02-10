@@ -381,7 +381,14 @@
         }
 
         /* Themes */
-        .ren-theme h1, .ren-theme .s-name { color: var(--accent-ren); text-shadow: 0 0 50px rgba(56, 189, 248, 0.3); }
+        .ren-theme { background: #000; border-radius: 28px; }
+        #ren.ren-theme {
+            background: #000;
+            border-radius: 28px;
+        }
+        .ren-theme h1, .ren-theme .s-name { color: #000; text-shadow: none; }
+        #ren.ren-theme { background: transparent; }
+        #ren .profile-banner { display: block; }
         .m1-theme h1 { color: var(--accent-m1); text-shadow: 0 0 50px rgba(239, 68, 68, 0.3); }
         .zero-theme h1 { color: var(--accent-zero); text-shadow: 0 0 50px rgba(229, 229, 229, 0.3); }
         .k-theme h1 { color: var(--accent-k); text-shadow: 0 0 50px rgba(147, 51, 234, 0.3); }
@@ -1927,16 +1934,16 @@
         };
 
         const defaultBanners = {
-            ren: "https://cdn.discordapp.com/banners/718594927998533662/f57aab91b53dcdfd32817e96572b5aa7.png?size=4096",
-            m1: "https://cdn.discordapp.com/banners/1108751350906490891/a_c1e5b8bdbcface609cbb22e5afc89347.gif?size=4096",
-            lummy: "https://cdn.discordapp.com/banners/913122767061274684/a_e90d9d8d5ec06896d7f76e6f47845416.gif?size=4096",
-            cazu: "https://cdn.discordapp.com/banners/1150126168289317034/dfeade3971f73f6bb943937deecf6591.png?size=4096",
-            sleepy: "https://media.discordapp.net/attachments/1467198563250471179/1467361073303650450/5cd9d696b514ddb1236729c0ee6d889b.png?ex=69816b7e&is=698019fe&hm=f83702e2ae84e4c412bf9981662ae58c9c4d57feb236d8fba40f8ade35e2b80f&=&format=webp&quality=lossless",
-            k: "https://media.discordapp.net/attachments/1453547166336286771/1467400537203933387/Rintarro_okabe.png?ex=6981903f&is=69803ebf&hm=7329576c39eca99247c477b4a706f9fc8af4fd36726ccac8ad1b6ab5107e6a28&=&format=webp&quality=lossless&width=1872&height=749",
-            zero: "https://images-ext-1.discordapp.net/external/xRvzkawBo6Z4A_VSj313IzUJubFD7ES9C96uxJozmFw/%3Fsize%3D4096/https/cdn.discordapp.com/banners/787335998404689941/a_f499069a8608be943f4d56f329eac0da.gif",
-            aizen: "https://media.discordapp.net/attachments/1447606476578230306/1467447535160266772/77E042D5-4402-456F-B72E-246F5477F137.gif?ex=69806a84&is=697f1904&hm=ba1e7f18ab50c8d99e6835ce40a4b087c94e2be93ec6ec0aa1ef9bb170742c53&=",
-            eli: "https://cdn.discordapp.com/attachments/1456331351858090236/1467515681800060928/a_d916e0bf7d62d6b11ea0d3df8a126868.gif?ex=698152bb&is=6980013b&hm=db538f3ccc1eedf26cf5c7c91c7b870457c4ab742e34e23e5133cee8ca59427e&",
-            brimo: "https://media.discordapp.net/attachments/1447622830740213870/1468473478314197043/Princess_.jpg?ex=69842600&is=6982d480&hm=8b5225e37c27dc126c597cb3994b84fcc6f2f91113356c617f032ee100235bc1&=&format=webp"
+            ren: "assets/renbanner.png",
+            m1: "assets/m1banner.gif",
+            lummy: "assets/lummybanner.gif",
+            cazu: "assets/cazubanner.webp",
+            sleepy: "assets/sleepybanner.png",
+            k: "assets/Kbanner.png",
+            zero: "assets/zerobanner.gif",
+            aizen: "assets/aizenbanner.gif",
+            eli: "assets/elibanner.gif",
+            brimo: "assets/brimobanner.jpg"
         };
 
         const fallbackAvatar = "https://cdn.discordapp.com/embed/avatars/0.png";
@@ -1978,15 +1985,15 @@
         };
 
         const songs = {
-            ren: { title: "Mama's Boy", artist: "Dominic Fike", url: "https://cdn.discordapp.com/attachments/886450143354843146/1467816596046221322/Dominic_Fike_-_Mamas_Boy_Official_Video_-_Dominic_Fike_720p_h264_youtube.mp4?ex=6983bc7b&is=69826afb&hm=9c1c131390a87a98b32044aac496990f7aa5236309ae744de0afffe451d0d612&" },
-            m1: { title: "Asphyxia", artist: "Cö shu Nie", url: "https://cdn.discordapp.com/attachments/886450143354843146/1467816312792285265/Co_shu_Nie_-_Asphyxia_-_coshunieVEVO_720p_h264_youtube.mp4?ex=6983bc37&is=69826ab7&hm=410f5647cbccb6e7556b9cc1f7ec830abf07abbe6f31e64ead7686b13708dd74&" },
-            home: { title: "Home", artist: "Jacal", url: "https://cdn.discordapp.com/attachments/1453547166336286771/1467811620838441081/when_a_guitar_riff_hits_you_so_hard_that_you_start_to_tear_up_full_version_-_jacal_720p_h264_youtube.mp4?ex=6983b7d9&is=69826659&hm=5adf5ddd576e7b0bed7ed287f75785dc9c570a6b6c49756e01bd022e4b101b1d&" },
-            lummy: { title: "Jane", artist: "The Long Faces", url: "https://cdn.discordapp.com/attachments/886450143354843146/1467816146630873088/Jane_-_The_Long_Faces_720p_h264_youtube.mp4?ex=6983bc10&is=69826a90&hm=4e9eb77be959a1f7000b18222aca8766a498510fbe7dfd7c71f223d2188f57b2&" },
-            sleepy: { title: "Picasso", artist: "Werenoi", url: "https://cdn.discordapp.com/attachments/886450143354843146/1467816285483307101/Werenoi_-_Picasso_Visualizer_-_Werenoi_1080p_h264_youtube.mp4?ex=6983bc31&is=69826ab1&hm=41726290c08d406f059fffb31552e89822cd64bc0fc07f22d3ec0e08bb29a1d7&" },
-            cazu: { title: "Homesick", artist: "Wave to Earth", url: "https://cdn.discordapp.com/attachments/886450143354843146/1467957368867520694/wave_to_earth_-_homesick_Official_Lyric_Video_-_wave_to_earth_720p_h264_youtube.mp4?ex=698396d6&is=69824556&hm=0cd8072731b02b3098fd719f0289b680447c7940bdf8921cd5a99107912853ad&" },
-            aizen: { title: "Golden Brown", artist: "The Stranglers", url: "https://cdn.discordapp.com/attachments/886450143354843146/1467957396897792173/The_Stranglers_-_Golden_Brown_-_stranglersofficial_480p_h264_youtube.mp4?ex=698396dc&is=6982455c&hm=2de8faf3bb78f1cf711c3932a1bb4982d098d07bfd7f66dc45a9d8fbd7ba88d3&", start: 166 },
-            eli: { title: "The Honored One", artist: "Gojo Satoru", url: "https://cdn.discordapp.com/attachments/886450143354843146/1467803396189982720/Gojo_Satoru_-_The_Honored_One_Jujutsu_Kaisen_Season_2_OST_-_Normaneverland_720p_h264_youtube.mp4?ex=6983b030&is=69825eb0&hm=a75fe4202a86463ca884ccf709af9d25f23d55f1afca73b295f1b538094bd57d&" },
-            brimo: { title: "GET IN THE RING", artist: "Max", url: "https://cdn.discordapp.com/attachments/886450143354843146/1468495732670468118/videoplayback_19.mp4?ex=69843aba&is=6982e93a&hm=40970ae05c56d1f69954e8e552371b35f348c2b9466d310ced6982b2fdaa7d81&" }
+            ren: { title: "Mama's Boy", artist: "Dominic Fike", url: "assets/ren_song.mp4" },
+            m1: { title: "Asphyxia", artist: "Cö shu Nie", url: "assets/m1_song.mp4" },
+            home: { title: "Home", artist: "Jacal", url: "assets/home_song.mp4" },
+            lummy: { title: "Jane", artist: "The Long Faces", url: "assets/lummy_song.mp4" },
+            sleepy: { title: "Picasso", artist: "Werenoi", url: "assets/sleepy_song.mp4" },
+            cazu: { title: "Homesick", artist: "Wave to Earth", url: "assets/cazu_song.mp4" },
+            aizen: { title: "Golden Brown", artist: "The Stranglers", url: "assets/aizen_song.mp4", start: 166 },
+            eli: { title: "The Honored One", artist: "Gojo Satoru", url: "assets/eli_song.mp4" },
+            brimo: { title: "GET IN THE RING", artist: "Max", url: "assets/brimo_song.mp4" }
         };
 
         let partners = [
@@ -1996,17 +2003,17 @@
         let partnerText = "Want to collaborate? DM the <span class=\"p-highlight\">Manager</span> or any of the <span class=\"p-highlight\">@Arata Founders</span> inside our Discord.";
 
         const zeroSongs = [
-            { title: "Weakest VS Strongest", artist: "Academy City", url: "https://cdn.discordapp.com/attachments/886450143354843146/1467962705607528642/A_Certain_Scientific_Railgun_S_OST_2_Weakest_VS_Strongest_-_Kakine_Teitoku_720p_h264_youtube.mp4?ex=69839bce&is=69824a4e&hm=3603772f93567667cc90471fc8cde5850ca239c877ccd23ab60f1567ce2cf1e3&" },
-            { title: "ROAR", artist: "Official", url: "https://cdn.discordapp.com/attachments/1453951035877097554/1467946453447086222/ROAROfficial_MV_-_Official_YouTube_Channel_720p_h264_youtube.mp4?ex=69838cab&is=69823b2b&hm=97d247193f361959f482a1f3dad37ed90d522a488feab113e5657662d40ee116&" }
+            { title: "ROAR", artist: "Official", url: "assets/zero_song_1.mp4" },
+            { title: "Weakest VS Strongest", artist: "Academy City", url: "assets/zero_song_2.mp4" }
         ];
 
         const kSongs = [
-            { title: "Chainsaw Man - Trailer OST", artist: "Sacha", url: "https://cdn.discordapp.com/attachments/886450143354843146/1467955033676054548/Chainsaw_Man_-_Trailer_OST_Extended_-_Sacha_720p_h264_youtube.mp4?ex=698394a9&is=69824329&hm=0a43120d87e7c696761abfb13e588b27ff424b270b210eedcc1fd8e3c4bc555f&", start: 50 },
-            { title: "GATE OF STEINER", artist: "Steins;Gate", url: "https://cdn.discordapp.com/attachments/1453547166336286771/1467972002185871573/GATE_OF_STEINER_-Piano-_-_Takeshi_Abo_720p_h264_youtube.mp4?ex=6983a476&is=698252f6&hm=c6904ebcb521b9c91e982341e3ced3b9d77854ae3b4e7ce4afa1a0ed92074ee2&" },
-            { title: "Town, Flow of Time, People", artist: "Clannad", url: "https://cdn.discordapp.com/attachments/1453547166336286771/1467972001393279036/Clannad_-_Town_Flow_of_Time_People_-_Ben_Booze_480p_h264_youtube.mp4?ex=6983a476&is=698252f6&hm=12fdea1ad833bbc649ab7a21feb08849c57d2fd0061b769ec1fb881ae10ff859&" }
+            { title: "Chainsaw Man - Trailer OST", artist: "Sacha", url: "assets/k_song_1.mp4", start: 50 },
+            { title: "GATE OF STEINER", artist: "Steins;Gate", url: "assets/k_song_2.mp4" },
+            { title: "Town, Flow of Time, People", artist: "Clannad", url: "assets/k_song_3.mp4" }
         ];
 
-        const kRare = { title: "TALAHON-GHOUL", artist: "Joseph Stakoz Yoresh", url: "https://cdn.discordapp.com/attachments/1453547166336286771/1467972003137851637/TALAHON-GHOUL_Episode_1.mp4?ex=6983a477&is=698252f7&hm=f29da2ee72ed0136385e427eef5a4920cfd442ac07e7a18549ed656fa059efc7&" };
+        const kRare = { title: "TALAHON-GHOUL", artist: "Joseph Stakoz Yoresh", url: "assets/k_rare.mp4" };
 
         const arataData = {
             title: "ARATA", play: "https://www.roblox.com/games/98861725687885/ARATA", discord: "https://discord.gg/arata",

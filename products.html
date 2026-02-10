@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -10,11 +10,15 @@
     <style>
         :root {
             --bg: #0b0d14;
-            --panel: rgba(255,255,255,0.04);
-            --border: rgba(255,255,255,0.1);
-            --text: #e9edf1;
+            --panel: rgba(255,255,255,0.05);
+            --panel-strong: rgba(255,255,255,0.08);
+            --border: rgba(255,255,255,0.14);
+            --text: #eef1f5;
             --muted: #9aa3ad;
             --accent: #7dd3fc;
+            --accent-strong: #60a5fa;
+            --good: #7dffb1;
+            --bad: #ff7a7a;
             --ease: cubic-bezier(0.18, 0.98, 0.2, 1);
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -23,20 +27,21 @@
             color: var(--text);
             background:
                 radial-gradient(900px 700px at 20% 15%, rgba(125, 211, 252, 0.12), transparent 60%),
-                radial-gradient(900px 700px at 80% 30%, rgba(147, 51, 234, 0.10), transparent 60%),
+                radial-gradient(900px 700px at 80% 30%, rgba(147, 51, 234, 0.16), transparent 60%),
+                radial-gradient(700px 400px at 50% 80%, rgba(59, 130, 246, 0.08), transparent 60%),
                 var(--bg);
             min-height: 100vh;
         }
         .wrap {
-            max-width: 1100px;
+            max-width: 1200px;
             margin: 0 auto;
-            padding: 60px 24px 80px;
+            padding: 56px 24px 90px;
         }
         .top {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 28px;
+            margin-bottom: 26px;
         }
         .brand {
             font-family: 'Space Grotesk', sans-serif;
@@ -46,6 +51,7 @@
         .btn {
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 8px;
             padding: 10px 16px;
             border-radius: 999px;
@@ -54,15 +60,63 @@
             color: #fff;
             text-decoration: none;
             font-weight: 600;
-            transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease);
+            transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease), background 0.2s var(--ease);
         }
         .btn:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,0.35); }
+        .btn.primary {
+            background: linear-gradient(135deg, rgba(125,211,252,0.35), rgba(96,165,250,0.55));
+            border-color: rgba(125,211,252,0.5);
+        }
         h1 {
             font-family: 'Space Grotesk', sans-serif;
-            font-size: clamp(2rem, 5vw, 3rem);
+            font-size: clamp(2.2rem, 5vw, 3.2rem);
             margin-bottom: 8px;
         }
-        p.lead { color: var(--muted); margin-bottom: 24px; }
+        p.lead { color: var(--muted); margin-bottom: 22px; max-width: 760px; }
+        .hero-line {
+            width: 140px;
+            height: 4px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, rgba(125,211,252,0.8), rgba(96,165,250,0.2));
+            margin-bottom: 14px;
+            box-shadow: 0 0 18px rgba(125,211,252,0.35);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin: 18px 0 26px;
+            flex-wrap: wrap;
+        }
+        .tab {
+            padding: 10px 14px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,0.04);
+            color: var(--muted);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s var(--ease);
+            position: relative;
+            overflow: hidden;
+        }
+        .tab.active {
+            color: #fff;
+            border-color: rgba(125,211,252,0.6);
+            background: rgba(125,211,252,0.12);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+        }
+        .tab.active::after {
+            content: "";
+            position: absolute;
+            left: 18px;
+            right: 18px;
+            bottom: 6px;
+            height: 2px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, rgba(125,211,252,0.85), rgba(96,165,250,0.25));
+        }
+
         .grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -75,32 +129,100 @@
             overflow: hidden;
             box-shadow: 0 20px 50px rgba(0,0,0,0.45);
             transition: transform 0.25s var(--ease), box-shadow 0.3s var(--ease);
+            position: relative;
         }
         .card:hover { transform: translateY(-4px); box-shadow: 0 28px 70px rgba(0,0,0,0.6); }
+        .card::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background: radial-gradient(400px 120px at 30% -10%, rgba(125,211,252,0.12), transparent 60%);
+            opacity: 0;
+            transition: opacity 0.3s var(--ease);
+        }
+        .card:hover::after { opacity: 1; }
         .media { width: 100%; aspect-ratio: 16/9; background: #0a0c12; }
         .media video { width: 100%; height: 100%; object-fit: cover; display: block; }
         .body { padding: 18px 20px 20px; }
-        .title { font-weight: 800; margin-bottom: 6px; font-size: 1.05rem; }
+        .title { font-weight: 800; margin-bottom: 6px; font-size: 1.1rem; }
         .meta { display: flex; gap: 10px; align-items: center; color: var(--muted); font-size: 0.85rem; margin-bottom: 12px; }
         .price { color: #fff; font-weight: 800; }
         .cta { display: flex; gap: 10px; flex-wrap: wrap; }
         .cta .btn { padding: 10px 14px; border-radius: 12px; }
-        .note {
-            margin-top: 30px;
-            color: var(--muted);
-            font-size: 0.9rem;
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.7rem;
+            padding: 6px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(125,211,252,0.4);
+            background: rgba(125,211,252,0.14);
+            color: #d9f0ff;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
         }
-        .checkout {
-            margin-top: 36px;
-            padding: 22px;
-            border-radius: 20px;
+
+        .layout {
+            display: grid;
+            grid-template-columns: 1.3fr 0.7fr;
+            gap: 26px;
+            align-items: start;
+        }
+
+        .panel {
+            background: var(--panel);
             border: 1px solid var(--border);
-            background: rgba(255,255,255,0.03);
+            border-radius: 20px;
+            padding: 20px;
+        }
+
+        .cart {
             display: grid;
             gap: 14px;
+            position: sticky;
+            top: 24px;
         }
-        .checkout h2 { font-size: 1.1rem; }
-        .checkout .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+        .cart h2 { font-size: 1.1rem; }
+        .checkout-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+        }
+        .checkout-title .lock {
+            width: 28px;
+            height: 28px;
+            display: grid;
+            place-items: center;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            font-size: 0.95rem;
+        }
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 14px;
+            border-radius: 14px;
+            background: var(--panel-strong);
+            border: 1px solid rgba(255,255,255,0.08);
+            font-size: 0.95rem;
+        }
+        .cart-empty { color: var(--muted); font-size: 0.9rem; }
+        .cart-total {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(255,255,255,0.04);
+            font-weight: 700;
+        }
+
         #card-element {
             background: #0f1320;
             border: 1px solid rgba(255,255,255,0.12);
@@ -108,11 +230,98 @@
             padding: 14px;
             color: #fff;
             min-height: 50px;
-            width: 100%;
         }
         .status { color: var(--muted); font-size: 0.9rem; }
-        .status.error { color: #ff7a7a; }
-        .status.success { color: #7dffb1; }
+        .status.error { color: var(--bad); }
+        .status.success { color: var(--good); }
+        .checkout-label {
+            font-size: 0.85rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+        .payment-list {
+            display: grid;
+            gap: 10px;
+        }
+        .payment-option {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 12px 14px;
+            border-radius: 14px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.12);
+            color: #fff;
+            font-weight: 600;
+        }
+        .payment-option .left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .payment-option .badge {
+            margin: 0;
+            padding: 4px 8px;
+            font-size: 0.65rem;
+        }
+        .payment-option.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .card-icons {
+            display: flex;
+            gap: 6px;
+        }
+        .card-pill {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-size: 0.7rem;
+            letter-spacing: 0.06em;
+        }
+
+        .downloads {
+            display: none;
+            margin-top: 12px;
+            gap: 10px;
+        }
+        .downloads.show {
+            display: grid;
+        }
+        .download-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,0.04);
+            color: #fff;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .section-note {
+            margin-top: 18px;
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        .empty-state {
+            padding: 22px;
+            border: 1px dashed rgba(255,255,255,0.18);
+            border-radius: 16px;
+            color: var(--muted);
+            background: rgba(255,255,255,0.03);
+        }
+
+        @media (max-width: 980px) {
+            .layout { grid-template-columns: 1fr; }
+            .cart { position: static; }
+        }
         @media (max-width: 700px) {
             .top { flex-direction: column; align-items: flex-start; gap: 12px; }
         }
@@ -126,60 +335,115 @@
             <a class="btn" href="index.html">Back to Home</a>
         </div>
         <h1>Products & Services</h1>
-        <p class="lead">Preview our animation packs. Purchase directly with card below.</p>
+        <div class="hero-line"></div>
+        <p class="lead">Browse our packs and purchase instantly. After payment, you will get download links for the .blend files.</p>
 
-        <div class="grid">
-            <div class="card">
-                <div class="media">
-                    <video src="https://cdn.discordapp.com/attachments/1456409796667510996/1469411367978274877/naoya.mp4?ex=69878f7a&is=69863dfa&hm=c0c67b320c12723c2813b32f78dccab6edad076f965eed3bbec19d09157e874d&" muted loop playsinline preload="metadata"></video>
-                </div>
-                <div class="body">
-                    <div class="title">Naoya</div>
-                    <div class="meta"><span class="price">$10</span><span>Animation</span></div>
-                    <div class="cta">
-                        <button class="btn buy-btn" data-product="naoya">Buy with Card</button>
-                    </div>
-                </div>
-            </div>
-            <div class="card">
-                <div class="media">
-                    <video src="https://cdn.discordapp.com/attachments/1456409796667510996/1469411369106407668/lapse_blue.mp4?ex=69878f7a&is=69863dfa&hm=915bf9d90eed8233224e93a3dbee506ae2d48fb9d5b60eec222e0c0d08bec88d&" muted loop playsinline preload="metadata"></video>
-                </div>
-                <div class="body">
-                    <div class="title">Lapse Blue</div>
-                    <div class="meta"><span class="price">$10</span><span>Animation</span></div>
-                    <div class="cta">
-                        <button class="btn buy-btn" data-product="lapse">Buy with Card</button>
-                    </div>
-                </div>
-            </div>
-            <div class="card">
-                <div class="media">
-                    <video src="https://cdn.discordapp.com/attachments/1456409796667510996/1469411370364829869/sukuna_domainn.mp4?ex=69878f7b&is=69863dfb&hm=2f08ee4b3b739feaf37adf487ef8d1fcd058879f8e3c82504257e576d8f4992b&" muted loop playsinline preload="metadata"></video>
-                </div>
-                <div class="body">
-                    <div class="title">Sukuna</div>
-                    <div class="meta"><span class="price">$15</span><span>Animation</span></div>
-                    <div class="cta">
-                        <button class="btn buy-btn" data-product="sukuna">Buy with Card</button>
-                    </div>
-                </div>
-            </div>
+        <div class="tabs">
+            <button class="tab active" data-tab="animations">Animations</button>
+            <button class="tab" data-tab="scripting">Scripting</button>
+            <button class="tab" data-tab="vfx">VFX</button>
         </div>
 
-        <div class="checkout" id="checkout">
-            <h2>Secure Checkout</h2>
-            <div class="row">
-                <div class="status" id="checkout-selected">Select a product above.</div>
+        <div class="layout">
+            <div>
+                <div class="grid" data-section="animations">
+                    <div class="card" data-product="naoya">
+                        <div class="media">
+                            <video src="assets/naoya.mp4" muted loop playsinline preload="metadata"></video>
+                        </div>
+                        <div class="body">
+                            <div class="badge">Animation</div>
+                            <div class="title">Naoya</div>
+                            <div class="meta"><span class="price">$7.50</span><span>Animation</span></div>
+                            <div class="cta">
+                                <button class="btn add-btn" data-product="naoya">Add to Cart</button>
+                                <button class="btn primary buy-btn" data-product="naoya">Buy Now</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card" data-product="lapse">
+                        <div class="media">
+                            <video src="assets/gojo.mp4" muted loop playsinline preload="metadata"></video>
+                        </div>
+                        <div class="body">
+                            <div class="badge">Animation</div>
+                            <div class="title">Gojo</div>
+                            <div class="meta"><span class="price">$10</span><span>Animation</span></div>
+                            <div class="cta">
+                                <button class="btn add-btn" data-product="lapse">Add to Cart</button>
+                                <button class="btn primary buy-btn" data-product="lapse">Buy Now</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card" data-product="sukuna">
+                        <div class="media">
+                            <video src="assets/sukuna.mp4" muted loop playsinline preload="metadata"></video>
+                        </div>
+                        <div class="body">
+                            <div class="badge">Animation</div>
+                            <div class="title">Sukuna</div>
+                            <div class="meta"><span class="price">$15</span><span>Animation</span></div>
+                            <div class="cta">
+                                <button class="btn add-btn" data-product="sukuna">Add to Cart</button>
+                                <button class="btn primary buy-btn" data-product="sukuna">Buy Now</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid" data-section="scripting" style="display:none">
+                    <div class="empty-state">No scripting products yet. Check back soon.</div>
+                </div>
+
+                <div class="grid" data-section="vfx" style="display:none">
+                    <div class="empty-state">No VFX products yet. Check back soon.</div>
+                </div>
             </div>
-            <div id="card-element"></div>
-            <div class="row">
-                <button class="btn" id="pay-btn" disabled>Pay Now</button>
-                <span class="status" id="checkout-status"></span>
+
+            <div class="panel cart">
+                <div class="checkout-title"><span class="lock">🔒</span> Secure checkout</div>
+                <div class="cart-empty" id="cart-empty">No items yet.</div>
+                <div id="cart-items"></div>
+                <div class="cart-total" id="cart-total"><span>Total</span><span>$0</span></div>
+                <div class="status" id="checkout-selected">Select a product to continue.</div>
+                <div class="checkout-label">Select payment type</div>
+                <div class="payment-list">
+                    <div class="payment-option">
+                        <div class="left">
+                            <div class="card-icons">
+                                <div class="card-pill">VISA</div>
+                                <div class="card-pill">MC</div>
+                                <div class="card-pill">AMEX</div>
+                                <div class="card-pill">DISC</div>
+                            </div>
+                            <span>Credit / Debit Card</span>
+                        </div>
+                        <span class="badge">Active</span>
+                    </div>
+                    <div class="payment-option disabled">
+                        <div class="left">
+                            <div class="card-pill">PayPal</div>
+                            <span>PayPal</span>
+                        </div>
+                        <span class="badge">Soon</span>
+                    </div>
+                    <div class="payment-option disabled">
+                        <div class="left">
+                            <div class="card-pill">Other</div>
+                            <span>Other</span>
+                        </div>
+                        <span class="badge">Soon</span>
+                    </div>
+                </div>
+                <div id="card-element"></div>
+                <div class="row">
+                    <button class="btn primary" id="pay-btn" disabled>Pay Now</button>
+                    <span class="status" id="checkout-status"></span>
+                </div>
+                <div class="downloads" id="download-links"></div>
+                <div class="section-note">Need custom work? Use the contact page and include budget, timeline, and references.</div>
             </div>
         </div>
-
-        <div class="note">Need custom work? Use the contact page and include your budget, timeline, and reference links.</div>
     </div>
 
     <script>
@@ -187,6 +451,18 @@
         let selectedProduct = null;
         let stripe = null;
         let card = null;
+
+        const PRODUCT_INFO = {
+            naoya: { name: 'Naoya', price: '$7.50', cents: 750 },
+            lapse: { name: 'Gojo', price: '$10', cents: 1000 },
+            sukuna: { name: 'Sukuna', price: '$15', cents: 1500 }
+        };
+
+        const DOWNLOAD_LINKS = {
+            naoya: 'https://drive.google.com/uc?export=download&id=1F81iqRsZPZ40OWxjGURMFkS-yCe58HSc',
+            lapse: 'https://drive.google.com/uc?export=download&id=1TpciawVfmQVINW98DaPAPG-QdAN_p3lm',
+            sukuna: 'https://drive.google.com/uc?export=download&id=1P1nD-limBEI-39nMZddXrEatp5sgiIPU'
+        };
 
         document.querySelectorAll('.media video').forEach(video => {
             video.addEventListener('mouseenter', () => video.play().catch(() => {}));
@@ -200,10 +476,34 @@
         const selectedEl = document.getElementById('checkout-selected');
         const statusEl = document.getElementById('checkout-status');
         const payBtn = document.getElementById('pay-btn');
+        const cartEmpty = document.getElementById('cart-empty');
+        const cartItems = document.getElementById('cart-items');
+        const cartTotal = document.getElementById('cart-total');
+        const downloadLinks = document.getElementById('download-links');
 
         const setStatus = (msg, type) => {
             statusEl.textContent = msg || '';
             statusEl.className = 'status' + (type ? ` ${type}` : '');
+        };
+
+        const renderCart = () => {
+            cartItems.innerHTML = '';
+            if (!selectedProduct) {
+                cartEmpty.style.display = 'block';
+                selectedEl.textContent = 'Select a product to continue.';
+                cartTotal.innerHTML = '<span>Total</span><span>$0</span>';
+                payBtn.disabled = true;
+                return;
+            }
+            cartEmpty.style.display = 'none';
+            const info = PRODUCT_INFO[selectedProduct];
+            const item = document.createElement('div');
+            item.className = 'cart-item';
+            item.innerHTML = `<span>${info.name}</span><strong>${info.price}</strong>`;
+            cartItems.appendChild(item);
+            cartTotal.innerHTML = `<span>Total</span><span>${info.price}</span>`;
+            selectedEl.textContent = `Selected: ${info.name}`;
+            payBtn.disabled = false;
         };
 
         const initStripe = async () => {
@@ -228,11 +528,23 @@
             card.mount('#card-element');
         };
 
+        document.querySelectorAll('.add-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                selectedProduct = btn.dataset.product;
+                renderCart();
+                setStatus('');
+                try {
+                    await initStripe();
+                } catch (e) {
+                    setStatus('Stripe not configured yet.', 'error');
+                }
+            });
+        });
+
         document.querySelectorAll('.buy-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
                 selectedProduct = btn.dataset.product;
-                selectedEl.textContent = `Selected: ${selectedProduct}`;
-                payBtn.disabled = false;
+                renderCart();
                 setStatus('');
                 try {
                     await initStripe();
@@ -244,7 +556,7 @@
 
         payBtn.addEventListener('click', async () => {
             if (!selectedProduct) return;
-            setStatus('Creating payment…');
+            setStatus('Creating payment...', '');
             try {
                 await initStripe();
                 const piRes = await fetch(`${API_BASE}/create-payment-intent`, {
@@ -263,12 +575,42 @@
                     return;
                 }
                 if (paymentIntent && paymentIntent.status === 'succeeded') {
-                    setStatus('Payment received. We will contact you shortly.', 'success');
+                    setStatus('Payment received. Your download is ready below.', 'success');
+                    const link = DOWNLOAD_LINKS[selectedProduct];
+                    downloadLinks.innerHTML = '';
+                    if (link && !link.startsWith('REPLACE_WITH')) {
+                        const a = document.createElement('a');
+                        a.className = 'download-link';
+                        a.href = link;
+                        a.target = '_blank';
+                        a.rel = 'noopener';
+                        a.textContent = `Download ${PRODUCT_INFO[selectedProduct].name} (.blend)`;
+                        downloadLinks.appendChild(a);
+                    } else {
+                        const msg = document.createElement('div');
+                        msg.className = 'status error';
+                        msg.textContent = 'Download link not set yet. Upload the .blend file and update the link.';
+                        downloadLinks.appendChild(msg);
+                    }
+                    downloadLinks.classList.add('show');
                 }
             } catch (e) {
                 setStatus(e.message || 'Payment failed', 'error');
             }
         });
+
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                const target = tab.dataset.tab;
+                document.querySelectorAll('[data-section]').forEach(section => {
+                    section.style.display = section.dataset.section === target ? 'grid' : 'none';
+                });
+            });
+        });
+
+        renderCart();
     </script>
 </body>
 </html>
