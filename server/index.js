@@ -81,9 +81,22 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
 app.use(express.json());
+app.use((req, _res, next) => {
+  if (req.path === "/apply") {
+    console.log("Apply request:", {
+      method: req.method,
+      origin: req.headers.origin || null,
+      contentType: req.headers["content-type"] || null
+    });
+  }
+  next();
+});
 app.use((err, _req, res, next) => {
   if (err?.message === "Not allowed by CORS") {
     return res.status(403).json({ ok: false, error: "Not allowed by CORS" });
+  }
+  if (err?.code === "LIMIT_FILE_SIZE") {
+    return res.status(413).json({ ok: false, error: "File too large" });
   }
   return next(err);
 });
