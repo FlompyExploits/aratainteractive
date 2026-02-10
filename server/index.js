@@ -478,10 +478,18 @@ client.on("interactionCreate", async (interaction) => {
     if (interaction.commandName !== "reply") return;
     if (!interaction.guild || interaction.guild.id !== GUILD_ID) return;
 
-    const member = await interaction.guild.members.fetch(interaction.user.id);
+    await interaction.deferReply({ ephemeral: true });
+
+    let member;
+    try {
+      member = await interaction.guild.members.fetch(interaction.user.id);
+    } catch (e) {
+      console.error("interactionCreate member fetch failed:", e?.message || e);
+      return interaction.editReply("Unable to verify your roles right now. Try again in a moment.");
+    }
     const hasRole = member.roles.cache.has(FOUNDERS_ROLE_ID) || member.roles.cache.has(MANAGERS_ROLE_ID);
     if (!hasRole) {
-      return interaction.reply({ content: "You do not have permission to use this command.", ephemeral: true });
+      return interaction.editReply("You do not have permission to use this command.");
     }
 
     const msgId = interaction.options.getString("message_id", true);
@@ -490,7 +498,7 @@ client.on("interactionCreate", async (interaction) => {
     const apps = loadApplications();
     const appData = apps[msgId];
     if (!appData) {
-      return interaction.reply({ content: "Application not found for that message ID.", ephemeral: true });
+      return interaction.editReply("Application not found for that message ID.");
     }
 
     const dmUser = await client.users.fetch(appData.discord_id);
@@ -501,13 +509,18 @@ client.on("interactionCreate", async (interaction) => {
 
     try {
       await dmUser.send(replyBody);
-      return interaction.reply({ content: `Sent DM to ${appData.discord_username} (email: ${appData.email}).`, ephemeral: true });
+      return interaction.editReply(`Sent DM to ${appData.discord_username} (email: ${appData.email}).`);
     } catch (e) {
       console.error("DM failed:", e?.message || e);
-      return interaction.reply({ content: "DM failed (user may have DMs closed).", ephemeral: true });
+      return interaction.editReply("DM failed (user may have DMs closed).");
     }
   } catch (e) {
     console.error("interactionCreate failed:", e?.message || e);
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply("Command failed. Please try again.");
+      }
+    } catch {}
   }
 });
 
