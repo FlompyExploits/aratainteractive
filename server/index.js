@@ -37,6 +37,7 @@ const {
   STRIPE_AMOUNT_NAOYA,
   STRIPE_AMOUNT_LAPSE,
   STRIPE_AMOUNT_SUKUNA,
+  DISCORD_WEBHOOK_URL,
   ALLOWED_ORIGINS,
   S3_ENDPOINT,
   S3_REGION = "auto",
@@ -202,10 +203,10 @@ const refreshInvitesCache = async () => {
 
 app.post("/apply", upload.single("resume"), async (req, res) => {
   try {
-    if (!APPLICATION_CHANNEL_ID) {
-      return res.status(500).json({ ok: false, error: "Application channel not configured" });
+    if (!APPLICATION_CHANNEL_ID && !DISCORD_WEBHOOK_URL) {
+      return res.status(500).json({ ok: false, error: "Application destination not configured" });
     }
-    if (!client.isReady()) {
+    if (!client.isReady() && !DISCORD_WEBHOOK_URL) {
       return res.status(503).json({ ok: false, error: "Bot not ready, try again shortly" });
     }
 
@@ -251,20 +252,36 @@ app.post("/apply", upload.single("resume"), async (req, res) => {
       footer: { text: `Applicant ID: ${discord_id}` }
     };
 
-    if (!applicationChannel) {
-      const channel = await client.channels.fetch(APPLICATION_CHANNEL_ID);
-      if (!channel || !channel.isTextBased?.()) {
-        return res.status(500).json({ ok: false, error: "Application channel invalid" });
+    let msgId = null;
+    if (DISCORD_WEBHOOK_URL) {
+      const webhookPayload = {
+        content,
+        embeds: [embed],
+        allowed_mentions: { parse: ["roles"] }
+      };
+      const webhookResponse = await axios.post(
+        DISCORD_WEBHOOK_URL.includes("?")
+          ? `${DISCORD_WEBHOOK_URL}&wait=true`
+          : `${DISCORD_WEBHOOK_URL}?wait=true`,
+        webhookPayload,
+        { timeout: 10_000 }
+      );
+      msgId = webhookResponse?.data?.id || null;
+    } else {
+      if (!applicationChannel) {
+        const channel = await client.channels.fetch(APPLICATION_CHANNEL_ID);
+        if (!channel || !channel.isTextBased?.()) {
+          return res.status(500).json({ ok: false, error: "Application channel invalid" });
+        }
+        applicationChannel = channel;
       }
-      applicationChannel = channel;
+
+      const response = await applicationChannel.send({
+        content,
+        embeds: [embed]
+      });
+      msgId = response?.id || null;
     }
-
-    const response = await applicationChannel.send({
-      content,
-      embeds: [embed]
-    });
-
-    const msgId = response?.id;
     if (msgId) {
       const apps = loadApplications();
       apps[msgId] = {
@@ -288,6 +305,13 @@ app.post("/apply", upload.single("resume"), async (req, res) => {
     }
     res.status(500).json({ ok: false, error: "Failed to send application" });
   }
+});
+
+app.get("/apply", (_req, res) => {
+  res.status(405).json({
+    ok: false,
+    error: "Use POST /apply with multipart/form-data"
+  });
 });
 
 app.get("/stripe-config", (_req, res) => {
@@ -320,7 +344,11 @@ app.post("/create-payment-intent", async (req, res) => {
 });
 
 app.get("/health", (_req, res) => {
-  res.json({ ok: true });
+  res.json({
+    ok: true,
+    botReady: client.isReady(),
+    uptimeSec: Math.floor(process.uptime())
+  });
 });
 
 app.listen(PORT, () => {
