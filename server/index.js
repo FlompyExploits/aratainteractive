@@ -201,6 +201,24 @@ const refreshInvitesCache = async () => {
   }
 };
 
+const extractDiscordIdFromMessage = (msg) => {
+  if (!msg) return null;
+  const idRegex = /\b\d{17,20}\b/;
+  const embeds = Array.isArray(msg.embeds) ? msg.embeds : [];
+  for (const embed of embeds) {
+    const fields = Array.isArray(embed.fields) ? embed.fields : [];
+    for (const field of fields) {
+      const value = String(field?.value || "");
+      const match = value.match(idRegex);
+      if (match) return match[0];
+    }
+    const descMatch = String(embed?.description || "").match(idRegex);
+    if (descMatch) return descMatch[0];
+  }
+  const contentMatch = String(msg.content || "").match(idRegex);
+  return contentMatch ? contentMatch[0] : null;
+};
+
 app.post("/apply", upload.single("resume"), async (req, res) => {
   try {
     if (!APPLICATION_CHANNEL_ID && !DISCORD_WEBHOOK_URL) {
@@ -232,7 +250,13 @@ app.post("/apply", upload.single("resume"), async (req, res) => {
       return res.status(400).json({ ok: false, error: "Resume required" });
     }
 
-    const resumeUrl = await uploadResume(req.file, name);
+    let resumeUrl = null;
+    try {
+      resumeUrl = await uploadResume(req.file, name);
+    } catch (uploadErr) {
+      console.error("Resume upload failed:", uploadErr?.name, uploadErr?.message || uploadErr);
+      return res.status(500).json({ ok: false, error: "Resume upload failed (check S3 settings)" });
+    }
     if (!resumeUrl) {
       return res.status(500).json({ ok: false, error: "Resume storage not configured" });
     }
@@ -302,6 +326,26 @@ app.post("/apply", upload.single("resume"), async (req, res) => {
     const status = err?.response?.status;
     if (status === 429 || status === 1015) {
       return res.status(503).json({ ok: false, error: "Discord rate limit, try again shortly" });
+    }
+    if (DISCORD_WEBHOOK_URL && status === 404) {
+      return res.status(500).json({ ok: false, error: "Discord webhook not found (check DISCORD_WEBHOOK_URL)" });
+    }
+    if (DISCORD_WEBHOOK_URL && (status === 401 || status === 403)) {
+      return res.status(500).json({ ok: false, error: "Discord webhook unauthorized (invalid webhook URL/token)" });
+    }
+    if (
+      err?.name === "InvalidAccessKeyId" ||
+      err?.name === "SignatureDoesNotMatch" ||
+      err?.name === "CredentialsProviderError"
+    ) {
+      return res.status(500).json({ ok: false, error: "S3 credentials are invalid" });
+    }
+    if (
+      String(err?.code || "").includes("ECONN") ||
+      String(err?.code || "").includes("ETIMEDOUT") ||
+      String(err?.name || "").includes("Timeout")
+    ) {
+      return res.status(503).json({ ok: false, error: "Network timeout talking to Discord/S3" });
     }
     res.status(500).json({ ok: false, error: "Failed to send application" });
   }
@@ -519,7 +563,7 @@ client.on("interactionCreate", async (interaction) => {
     if (interaction.commandName !== "reply") return;
     if (!interaction.guild || interaction.guild.id !== GUILD_ID) return;
 
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: 64 });
 
     let member;
     try {
@@ -537,9 +581,45 @@ client.on("interactionCreate", async (interaction) => {
     const replyText = interaction.options.getString("message", true);
 
     const apps = loadApplications();
-    const appData = apps[msgId];
+    let appData = apps[msgId] || null;
     if (!appData) {
-      return interaction.editReply("Application not found for that message ID.");
+      try {
+        if (!applicationChannel && APPLICATION_CHANNEL_ID) {
+          const ch = await client.channels.fetch(APPLICATION_CHANNEL_ID);
+          if (ch && ch.isTextBased?.()) applicationChannel = ch;
+        }
+        const candidateChannels = [];
+        if (applicationChannel && applicationChannel.isTextBased?.()) {
+          candidateChannels.push(applicationChannel);
+        }
+        for (const ch of interaction.guild.channels.cache.values()) {
+          if (!ch?.isTextBased?.()) continue;
+          if (candidateChannels.find((c) => c.id === ch.id)) continue;
+          candidateChannels.push(ch);
+          if (candidateChannels.length >= 40) break;
+        }
+        for (const sourceChannel of candidateChannels) {
+          try {
+            const sourceMsg = await sourceChannel.messages.fetch(msgId);
+            const inferredDiscordId = extractDiscordIdFromMessage(sourceMsg);
+            if (inferredDiscordId) {
+              appData = {
+                discord_id: inferredDiscordId,
+                discord_username: "Unknown",
+                email: "Unknown"
+              };
+              break;
+            }
+          } catch {
+            // Try next channel.
+          }
+        }
+      } catch (_e) {
+        // Continue to not-found message below.
+      }
+    }
+    if (!appData) {
+      return interaction.editReply("Message ID not found in applications/inquiries.");
     }
 
     const dmUser = await client.users.fetch(appData.discord_id);
