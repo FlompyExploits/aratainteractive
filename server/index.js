@@ -251,14 +251,13 @@ app.post("/apply", upload.single("resume"), async (req, res) => {
     }
 
     let resumeUrl = null;
-    try {
-      resumeUrl = await uploadResume(req.file, name);
-    } catch (uploadErr) {
-      console.error("Resume upload failed:", uploadErr?.name, uploadErr?.message || uploadErr);
-      return res.status(500).json({ ok: false, error: "Resume upload failed (check S3 settings)" });
-    }
-    if (!resumeUrl) {
-      return res.status(500).json({ ok: false, error: "Resume storage not configured" });
+    if (s3Client) {
+      try {
+        resumeUrl = await uploadResume(req.file, name);
+      } catch (uploadErr) {
+        console.error("Resume upload failed:", uploadErr?.name, uploadErr?.message || uploadErr);
+        return res.status(500).json({ ok: false, error: "Resume upload failed (check S3 settings)" });
+      }
     }
 
     const content = `<@&${FOUNDERS_ROLE_ID}> <@&${MANAGERS_ROLE_ID}>`;
@@ -270,7 +269,7 @@ app.post("/apply", upload.single("resume"), async (req, res) => {
         { name: "Email", value: email, inline: true },
         { name: "Discord", value: `${discord_username} (ID: ${discord_id})`, inline: false },
         { name: "Position", value: position, inline: true },
-        { name: "Resume", value: resumeUrl, inline: false },
+        { name: "Resume", value: resumeUrl || "Attached in Discord message", inline: false },
         { name: "Message", value: `\`\`\`\n${message}\n\`\`\`` }
       ],
       footer: { text: `Applicant ID: ${discord_id}` }
@@ -278,6 +277,12 @@ app.post("/apply", upload.single("resume"), async (req, res) => {
 
     let msgId = null;
     if (DISCORD_WEBHOOK_URL) {
+      if (!resumeUrl) {
+        return res.status(500).json({
+          ok: false,
+          error: "S3 is required when using webhook mode for resumes"
+        });
+      }
       const webhookPayload = {
         content,
         embeds: [embed],
@@ -302,7 +307,11 @@ app.post("/apply", upload.single("resume"), async (req, res) => {
 
       const response = await applicationChannel.send({
         content,
-        embeds: [embed]
+        embeds: [embed],
+        files: resumeUrl ? [] : [{
+          attachment: req.file.buffer,
+          name: req.file.originalname
+        }]
       });
       msgId = response?.id || null;
     }
@@ -314,12 +323,13 @@ app.post("/apply", upload.single("resume"), async (req, res) => {
         discord_username,
         discord_id,
         position,
-        resumeUrl,
+        resumeUrl: resumeUrl || `attachment:${req.file.originalname}`,
         status: "pending"
       };
       saveApplications(apps);
     }
 
+    console.log("Apply success:", { messageId: msgId, hasS3Resume: Boolean(resumeUrl) });
     res.json({ ok: true });
   } catch (err) {
     console.error("Apply failed:", err?.response?.status, err?.response?.data || err?.message || err);
@@ -410,7 +420,7 @@ const client = new Client({
   partials: [Partials.Message, Partials.Channel, Partials.Reaction]
 });
 
-client.on("ready", () => {
+client.on("clientReady", () => {
   console.log(`Bot online as ${client.user.tag}`);
   refreshInvitesCache();
   if (APPLICATION_CHANNEL_ID) {
