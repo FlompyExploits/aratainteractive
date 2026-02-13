@@ -119,6 +119,7 @@ const formOnly = multer();
 const dataDir = path.join(__dirname, "data");
 const appsFile = path.join(dataDir, "applications.json");
 const partnerFile = path.join(dataDir, "partners.json");
+const instantInvitesFile = path.join(dataDir, "instant_invites.json");
 const auditLogFile = path.join(dataDir, "audit.log");
 const rosterStateFile = path.join(dataDir, "dev_roster.json");
 const runtimeState = {
@@ -129,6 +130,7 @@ const runtimeState = {
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 if (!fs.existsSync(appsFile)) fs.writeFileSync(appsFile, JSON.stringify({}));
 if (!fs.existsSync(partnerFile)) fs.writeFileSync(partnerFile, JSON.stringify({}));
+if (!fs.existsSync(instantInvitesFile)) fs.writeFileSync(instantInvitesFile, JSON.stringify({}));
 if (!fs.existsSync(auditLogFile)) fs.writeFileSync(auditLogFile, "");
 if (!fs.existsSync(rosterStateFile)) fs.writeFileSync(rosterStateFile, JSON.stringify({}));
 
@@ -136,6 +138,8 @@ const loadApplications = () => JSON.parse(fs.readFileSync(appsFile, "utf-8") || 
 const saveApplications = (data) => fs.writeFileSync(appsFile, JSON.stringify(data, null, 2));
 const loadPartners = () => JSON.parse(fs.readFileSync(partnerFile, "utf-8") || "{}");
 const savePartners = (data) => fs.writeFileSync(partnerFile, JSON.stringify(data, null, 2));
+const loadInstantInvites = () => JSON.parse(fs.readFileSync(instantInvitesFile, "utf-8") || "{}");
+const saveInstantInvites = (data) => fs.writeFileSync(instantInvitesFile, JSON.stringify(data, null, 2));
 const loadRosterState = () => JSON.parse(fs.readFileSync(rosterStateFile, "utf-8") || "{}");
 const saveRosterState = (data) => fs.writeFileSync(rosterStateFile, JSON.stringify(data, null, 2));
 
@@ -212,6 +216,7 @@ const INQUIRY_CHANNEL_ID = CONTACT_CHANNEL_ID || "1468028979666751707";
 const PARTNER_REQUEST_CHANNEL_ID = PARTNER_CHANNEL_ID || "1471770824573714432";
 const PARTNER_ROLE_ID = PARTNER_BASE_ROLE_ID || "1471787925531267092";
 const PARTNER_WELCOME_CH_ID = PARTNER_WELCOME_CHANNEL_ID || "1471788287923454056";
+const MAIN_ARATA_DEVELOPER_ROLE_ID = "1467459331518632076";
 const AUDIT_CHANNEL_ID = AUDIT_LOG_CHANNEL_ID || "1471800781349978212";
 const ROSTER_CHANNEL_ID = DEV_ROSTER_CHANNEL_ID || AUDIT_CHANNEL_ID;
 const PARTNER_COLOR_PRESETS = {
@@ -239,7 +244,9 @@ const commandCooldownMs = {
   partnerstatus: 5000,
   partnerrolefix: 7000,
   partnerremove: 7000,
-  devskillsrefresh: 6000
+  devskillsrefresh: 6000,
+  instinv: 7000,
+  kickmem: 7000
 };
 
 const invitesCache = new Map();
@@ -432,6 +439,18 @@ const findPartnerEntry = (query) => {
     .pop();
   if (byUserId) return { partners, match: byUserId };
   return { partners, match: null };
+};
+
+const resolveRoleInGuild = async (guild, roleInput) => {
+  const raw = String(roleInput || "").trim();
+  if (!raw) return null;
+  const mentionMatch = raw.match(/^<@&(\d{17,20})>$/);
+  const roleId = mentionMatch ? mentionMatch[1] : (/^\d{17,20}$/.test(raw) ? raw : null);
+  if (roleId) {
+    return guild.roles.fetch(roleId).catch(() => null);
+  }
+  const byName = guild.roles.cache.find((r) => r.name.toLowerCase() === raw.toLowerCase());
+  return byName || null;
 };
 
 const removePartnerRoles = async (partnerData) => {
@@ -1280,11 +1299,47 @@ client.on("clientReady", () => {
     {
       name: "devskillsrefresh",
       description: "Refresh TEAM ROSTER message from current member roles (staff only)"
+    },
+    {
+      name: "instinv",
+      description: "Instant invite and role assignment without application (staff only)",
+      options: [
+        {
+          type: 3,
+          name: "userid",
+          description: "Target Discord user ID",
+          required: true
+        },
+        {
+          type: 3,
+          name: "role",
+          description: "Team role name, role ID, or role mention",
+          required: true
+        }
+      ]
+    },
+    {
+      name: "kickmem",
+      description: "Kick member from team server and remove main developer role (staff only)",
+      options: [
+        {
+          type: 3,
+          name: "userid",
+          description: "Target Discord user ID",
+          required: true
+        },
+        {
+          type: 3,
+          name: "reason",
+          description: "Kick reason",
+          required: true
+        }
+      ]
     }
   ];
 
   rest.put(Routes.applicationGuildCommands(DISCORD_CLIENT_ID, GUILD_ID), { body: commands })
-    .then(() => console.log("Slash commands registered: /reply /ping /botstatus /appstatus /dmuser /setappstatus /resendinvite /lookupdiscord /partnerstatus /partnerrolefix /partnerremove /devskillsrefresh"))
+    .then(() => console.log("Slash commands registered: /reply /ping /botstatus /appstatus /dmuser /setappstatus /resendinvite /lookupdiscord /partnerstatus /partnerrolefix /partnerremove /devskillsrefresh /instinv /kickmem"))
     .catch((e) => console.error("Slash command register failed:", e?.message || e));
 });
 
@@ -1456,6 +1511,27 @@ client.on("guildMemberAdd", async (member) => {
 
     if (member.guild.id !== TEAM_GUILD_ID) return;
 
+    const instantInvites = loadInstantInvites();
+    const instantEntry = instantInvites[member.user.id];
+    if (instantEntry?.roleId) {
+      const instantRole = await member.guild.roles.fetch(instantEntry.roleId).catch(() => null);
+      if (instantRole) {
+        await member.roles.add(instantRole.id, "Instant invite auto role on join").catch(() => {});
+      }
+      delete instantInvites[member.user.id];
+      saveInstantInvites(instantInvites);
+      await appendAuditLog(
+        "instant_invite_join_role_assigned",
+        {
+          targetUserId: member.user.id,
+          roleId: instantEntry.roleId,
+          roleName: instantEntry.roleName || instantRole?.name || "unknown",
+          invitedBy: instantEntry.invitedBy || null
+        },
+        null
+      );
+    }
+
     const apps = loadApplications();
     const appEntry = Object.values(apps).find(
       (a) => a.discord_id === member.user.id && a.status === "accepted"
@@ -1545,7 +1621,7 @@ client.on("messageCreate", async (message) => {
 client.on("interactionCreate", async (interaction) => {
   try {
     if (!interaction.isChatInputCommand()) return;
-    if (!["reply", "ping", "botstatus", "appstatus", "dmuser", "setappstatus", "resendinvite", "lookupdiscord", "partnerstatus", "partnerrolefix", "partnerremove", "devskillsrefresh"].includes(interaction.commandName)) return;
+    if (!["reply", "ping", "botstatus", "appstatus", "dmuser", "setappstatus", "resendinvite", "lookupdiscord", "partnerstatus", "partnerrolefix", "partnerremove", "devskillsrefresh", "instinv", "kickmem"].includes(interaction.commandName)) return;
     const cooldownKey = `${interaction.commandName}:${interaction.user.id}`;
     const cooldown = commandCooldownMs[interaction.commandName] || 5000;
     const lastUse = commandLastUse.get(cooldownKey) || 0;
@@ -1634,6 +1710,131 @@ client.on("interactionCreate", async (interaction) => {
       const refresh = await refreshDeveloperRoster("manual_command", interaction.user.id);
       if (!refresh.ok) return interaction.editReply(`Roster refresh failed: ${refresh.error}`);
       return interaction.editReply(`TEAM ROSTER refreshed in <#${refresh.channelId}>.`);
+    }
+
+    if (interaction.commandName === "instinv") {
+      const userId = interaction.options.getString("userid", true).trim();
+      const roleInput = interaction.options.getString("role", true).trim();
+      if (!/^\d{17,20}$/.test(userId)) return interaction.editReply("Invalid user ID.");
+
+      const teamGuild = await client.guilds.fetch(TEAM_GUILD_ID).catch(() => null);
+      if (!teamGuild) return interaction.editReply("Team server not found.");
+      await teamGuild.members.fetch();
+      const teamRole = await resolveRoleInGuild(teamGuild, roleInput);
+      if (!teamRole) return interaction.editReply("Team role not found. Use role name, role ID, or role mention.");
+      if (teamRole.id === teamGuild.id) return interaction.editReply("Cannot use @everyone role.");
+
+      const targetUser = await client.users.fetch(userId).catch(() => null);
+      if (!targetUser) return interaction.editReply("User not found.");
+
+      let inviteUrl = null;
+      let teamMember = await teamGuild.members.fetch(userId).catch(() => null);
+      const instantInvites = loadInstantInvites();
+      if (!teamMember) {
+        const channel = teamGuild.systemChannel
+          || teamGuild.channels.cache.find((c) => c.isTextBased?.() && c.permissionsFor(teamGuild.members.me).has("CreateInstantInvite"));
+        if (!channel) return interaction.editReply("No invite-capable channel found in team server.");
+        const invite = await channel.createInvite({ maxUses: 1, unique: true, maxAge: 60 * 60 * 24 });
+        inviteUrl = invite.url;
+        instantInvites[userId] = {
+          roleId: teamRole.id,
+          roleName: teamRole.name,
+          invitedBy: interaction.user.id,
+          invitedAt: new Date().toISOString()
+        };
+        saveInstantInvites(instantInvites);
+      } else {
+        await teamMember.roles.add(teamRole.id, `Instant invite role by ${interaction.user.tag || interaction.user.id}`);
+        if (instantInvites[userId]) {
+          delete instantInvites[userId];
+          saveInstantInvites(instantInvites);
+        }
+      }
+
+      const mainGuild = await client.guilds.fetch(GUILD_ID).catch(() => null);
+      let mainDevRoleAdded = false;
+      if (mainGuild) {
+        const mainMember = await mainGuild.members.fetch(userId).catch(() => null);
+        if (mainMember) {
+          await mainMember.roles.add(MAIN_ARATA_DEVELOPER_ROLE_ID).catch(() => {});
+          mainDevRoleAdded = true;
+        }
+      }
+
+      const dmLines = [
+        `You have been invited to Arata Int${inviteUrl ? `\nTeam Server: ${inviteUrl}` : ""}`,
+        `You have been roled: ${teamRole.name} and @Arata Developer!`,
+        `Main Server: ${MAIN_SERVER_LINK}`
+      ];
+      await targetUser.send(dmLines.join("\n")).catch(() => {});
+
+      await appendAuditLog(
+        "instant_invite",
+        {
+          targetUserId: userId,
+          roleId: teamRole.id,
+          roleName: teamRole.name,
+          invitedBy: interaction.user.id,
+          existingTeamMember: Boolean(teamMember),
+          mainDeveloperRoleAdded: mainDevRoleAdded
+        },
+        interaction.user.id
+      );
+
+      return interaction.editReply(
+        `Instant invite sent.\nUser: ${targetUser.tag} (${userId})\nRole: ${teamRole.name}\n` +
+        `${inviteUrl ? "Invite link was DM'd." : "User already in team server; role assigned."}`
+      );
+    }
+
+    if (interaction.commandName === "kickmem") {
+      const userId = interaction.options.getString("userid", true).trim();
+      const reason = interaction.options.getString("reason", true).trim();
+      if (!/^\d{17,20}$/.test(userId)) return interaction.editReply("Invalid user ID.");
+      if (reason.length < 2) return interaction.editReply("Reason is too short.");
+
+      const teamGuild = await client.guilds.fetch(TEAM_GUILD_ID).catch(() => null);
+      if (!teamGuild) return interaction.editReply("Team server not found.");
+      let kicked = false;
+      let removedTeamRoles = [];
+      const teamMember = await teamGuild.members.fetch(userId).catch(() => null);
+      if (teamMember) {
+        removedTeamRoles = teamMember.roles.cache.filter((r) => r.id !== teamGuild.id).map((r) => r.name);
+        if (removedTeamRoles.length) {
+          await teamMember.roles.remove(teamMember.roles.cache.filter((r) => r.id !== teamGuild.id), `Kick cleanup by ${interaction.user.id}`).catch(() => {});
+        }
+        await teamMember.kick(reason).catch(() => {});
+        kicked = true;
+      }
+
+      let mainRoleRemoved = false;
+      const mainGuild = await client.guilds.fetch(GUILD_ID).catch(() => null);
+      if (mainGuild) {
+        const mainMember = await mainGuild.members.fetch(userId).catch(() => null);
+        if (mainMember?.roles?.cache?.has(MAIN_ARATA_DEVELOPER_ROLE_ID)) {
+          await mainMember.roles.remove(MAIN_ARATA_DEVELOPER_ROLE_ID, `kickmem by ${interaction.user.id}`).catch(() => {});
+          mainRoleRemoved = true;
+        }
+      }
+
+      await appendAuditLog(
+        "kick_member",
+        {
+          targetUserId: userId,
+          kickedFromTeam: kicked,
+          removedTeamRoles: removedTeamRoles.join(", ") || "none",
+          removedMainDeveloperRole: mainRoleRemoved,
+          reason,
+          kickedBy: interaction.user.id
+        },
+        interaction.user.id
+      );
+
+      return interaction.editReply(
+        `Kick processed for ${userId}.\n` +
+        `Kicked from team: ${kicked ? "yes" : "no"}\n` +
+        `Removed @Arata Developer in main: ${mainRoleRemoved ? "yes" : "no"}`
+      );
     }
 
     if (["partnerstatus", "partnerrolefix", "partnerremove"].includes(interaction.commandName)) {
