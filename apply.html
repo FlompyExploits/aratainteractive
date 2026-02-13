@@ -206,7 +206,13 @@
         <input name="name" placeholder="Alias / Name" required />
         <input name="email" type="email" placeholder="Email" required />
         <input name="discord_username" placeholder="Discord Username" />
-        <input name="discord_id" placeholder="Discord ID (Optional)" />
+        <input
+          name="discord_id"
+          placeholder="Discord ID (Required)"
+          required
+          pattern="^[0-9]{17,20}$"
+          title="Enter a valid Discord ID (17-20 digits)"
+        />
         <div class="select-wrap full">
           <select name="position" required>
             <option value="Programmer">Programmer</option>

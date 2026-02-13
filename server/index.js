@@ -299,14 +299,23 @@ app.post("/apply", upload.single("resume"), async (req, res) => {
       position = "",
       message = ""
     } = req.body || {};
+    const cleanName = String(name).trim();
+    const cleanEmail = String(email).trim();
+    const cleanDiscordUsername = String(discord_username).trim();
+    const cleanDiscordId = String(discord_id).trim();
+    const cleanPosition = String(position).trim();
+    const cleanMessage = String(message).trim();
 
-    if (!name || !email || !discord_username || !discord_id || !position || !message) {
+    if (!cleanName || !cleanEmail || !cleanDiscordUsername || !cleanDiscordId || !cleanPosition || !cleanMessage) {
       return res.status(400).json({ ok: false, error: "Missing required fields" });
     }
-    if (!isValidEmail(email)) {
+    if (!isValidEmail(cleanEmail)) {
       return res.status(400).json({ ok: false, error: "Invalid email" });
     }
-    if (containsBadWords(name) || containsBadWords(message)) {
+    if (!/^\d{17,20}$/.test(cleanDiscordId)) {
+      return res.status(400).json({ ok: false, error: "Invalid Discord ID (must be 17-20 digits)" });
+    }
+    if (containsBadWords(cleanName) || containsBadWords(cleanMessage)) {
       return res.status(400).json({ ok: false, error: "Inappropriate content detected" });
     }
     if (!req.file) {
@@ -317,7 +326,7 @@ app.post("/apply", upload.single("resume"), async (req, res) => {
     if (s3Client) {
       try {
         console.log("Apply resume upload start");
-        resumeUrl = await withTimeout(uploadResume(req.file, name), 15_000, "resume_upload_timeout");
+        resumeUrl = await withTimeout(uploadResume(req.file, cleanName), 15_000, "resume_upload_timeout");
         console.log("Apply resume upload ok");
       } catch (uploadErr) {
         console.error("Resume upload failed:", uploadErr?.name, uploadErr?.message || uploadErr);
@@ -334,14 +343,14 @@ app.post("/apply", upload.single("resume"), async (req, res) => {
       title: "New Arata Application",
       color: 0x2d8cff,
       fields: [
-        { name: "Name", value: name, inline: true },
-        { name: "Email", value: email, inline: true },
-        { name: "Discord", value: `${discord_username} (ID: ${discord_id})`, inline: false },
-        { name: "Position", value: position, inline: true },
+        { name: "Name", value: cleanName, inline: true },
+        { name: "Email", value: cleanEmail, inline: true },
+        { name: "Discord", value: `${cleanDiscordUsername} (ID: ${cleanDiscordId})`, inline: false },
+        { name: "Position", value: cleanPosition, inline: true },
         { name: "Resume", value: resumeUrl || "Attached in Discord message", inline: false },
-        { name: "Message", value: `\`\`\`\n${message}\n\`\`\`` }
+        { name: "Message", value: `\`\`\`\n${cleanMessage}\n\`\`\`` }
       ],
-      footer: { text: `Applicant ID: ${discord_id}` }
+      footer: { text: `Applicant ID: ${cleanDiscordId}` }
     };
 
     let msgId = null;
@@ -404,11 +413,11 @@ app.post("/apply", upload.single("resume"), async (req, res) => {
     if (msgId) {
       const apps = loadApplications();
       apps[msgId] = {
-        name,
-        email,
-        discord_username,
-        discord_id,
-        position,
+        name: cleanName,
+        email: cleanEmail,
+        discord_username: cleanDiscordUsername,
+        discord_id: cleanDiscordId,
+        position: cleanPosition,
         resumeUrl: resumeUrl || `attachment:${req.file.originalname}`,
         status: "pending"
       };
