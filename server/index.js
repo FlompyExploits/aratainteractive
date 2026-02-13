@@ -1536,9 +1536,19 @@ client.on("guildMemberAdd", async (member) => {
     const instantInvites = loadInstantInvites();
     const instantEntry = instantInvites[member.user.id];
     if (instantEntry?.roleId) {
-      const instantRole = await member.guild.roles.fetch(instantEntry.roleId).catch(() => null);
-      if (instantRole) {
-        await member.roles.add(instantRole.id, "Instant invite auto role on join").catch(() => {});
+      const roleIds = Array.isArray(instantEntry.roleIds)
+        ? instantEntry.roleIds.filter((rid) => typeof rid === "string" && rid.length > 0)
+        : [];
+      if (!roleIds.length && instantEntry.roleId) roleIds.push(instantEntry.roleId);
+      if (DEV_ROLE && !roleIds.includes(DEV_ROLE)) roleIds.push(DEV_ROLE);
+
+      const validRoleIds = [];
+      for (const rid of roleIds) {
+        const roleObj = await member.guild.roles.fetch(rid).catch(() => null);
+        if (roleObj) validRoleIds.push(roleObj.id);
+      }
+      if (validRoleIds.length) {
+        await member.roles.add(validRoleIds, "Instant invite auto role on join").catch(() => {});
       }
       delete instantInvites[member.user.id];
       saveInstantInvites(instantInvites);
@@ -1547,7 +1557,8 @@ client.on("guildMemberAdd", async (member) => {
         {
           targetUserId: member.user.id,
           roleId: instantEntry.roleId,
-          roleName: instantEntry.roleName || instantRole?.name || "unknown",
+          roleIds: validRoleIds.length ? validRoleIds.join(",") : "none",
+          roleName: instantEntry.roleName || "unknown",
           invitedBy: instantEntry.invitedBy || null
         },
         null
@@ -1751,6 +1762,7 @@ client.on("interactionCreate", async (interaction) => {
       let inviteUrl = null;
       let teamMember = await teamGuild.members.fetch(userId).catch(() => null);
       const instantInvites = loadInstantInvites();
+      const roleIdsToAssign = [...new Set([DEV_ROLE, teamRole.id].filter(Boolean))];
       if (!teamMember) {
         const channel = teamGuild.systemChannel
           || teamGuild.channels.cache.find((c) => c.isTextBased?.() && c.permissionsFor(teamGuild.members.me).has("CreateInstantInvite"));
@@ -1759,13 +1771,14 @@ client.on("interactionCreate", async (interaction) => {
         inviteUrl = invite.url;
         instantInvites[userId] = {
           roleId: teamRole.id,
+          roleIds: roleIdsToAssign,
           roleName: teamRole.name,
           invitedBy: interaction.user.id,
           invitedAt: new Date().toISOString()
         };
         saveInstantInvites(instantInvites);
       } else {
-        await teamMember.roles.add(teamRole.id, `Instant invite role by ${interaction.user.tag || interaction.user.id}`);
+        await teamMember.roles.add(roleIdsToAssign, `Instant invite role by ${interaction.user.tag || interaction.user.id}`);
         if (instantInvites[userId]) {
           delete instantInvites[userId];
           saveInstantInvites(instantInvites);
@@ -1795,6 +1808,7 @@ client.on("interactionCreate", async (interaction) => {
           targetUserId: userId,
           roleId: teamRole.id,
           roleName: teamRole.name,
+          roleIdsAssigned: roleIdsToAssign.join(","),
           invitedBy: interaction.user.id,
           existingTeamMember: Boolean(teamMember),
           mainDeveloperRoleAdded: mainDevRoleAdded
@@ -1804,7 +1818,7 @@ client.on("interactionCreate", async (interaction) => {
 
       return interaction.editReply(
         `Instant invite sent.\nUser: ${targetUser.tag} (${userId})\nRole: ${teamRole.name}\n` +
-        `${inviteUrl ? "Invite link was DM'd." : "User already in team server; role assigned."}`
+        `${inviteUrl ? "Invite link was DM'd." : "User already in team server; roles assigned."}`
       );
     }
 
