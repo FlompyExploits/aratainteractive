@@ -30,6 +30,7 @@ const {
   PARTNER_CHANNEL_ID,
   PARTNER_BASE_ROLE_ID,
   PARTNER_WELCOME_CHANNEL_ID,
+  MAIN_PORTFOLIO_SERVER_ID,
   AUDIT_LOG_CHANNEL_ID,
   DEV_ROSTER_CHANNEL_ID,
   TEAM_SERVER_ID,
@@ -210,12 +211,22 @@ const ROLE_LABEL_MAP = {
   "gui artist": "GUI Artist",
   "ui/ux": "GUI Artist"
 };
+const INSTANT_INVITE_ROLE_CHOICES = [
+  { name: "VFX", value: ROLE_MAP.VFX },
+  { name: "Scripter", value: ROLE_MAP.Scripter },
+  { name: "SFX", value: ROLE_MAP.SFX },
+  { name: "Modeler", value: ROLE_MAP.Modeler },
+  { name: "Animator", value: ROLE_MAP.Animator },
+  { name: "GUI Artist", value: ROLE_MAP["Gui Artist"] },
+  { name: "Developer", value: DEV_ROLE }
+].filter((r) => Boolean(r.value));
 const OWNER_NOTIFY_USER_ID = "718594927998533662";
 const MAIN_SERVER_LINK = "https://discord.gg/JjPuB9Ue2q";
 const INQUIRY_CHANNEL_ID = CONTACT_CHANNEL_ID || "1468028979666751707";
 const PARTNER_REQUEST_CHANNEL_ID = PARTNER_CHANNEL_ID || "1471770824573714432";
 const PARTNER_ROLE_ID = PARTNER_BASE_ROLE_ID || "1471787925531267092";
 const PARTNER_WELCOME_CH_ID = PARTNER_WELCOME_CHANNEL_ID || "1471788287923454056";
+const MAIN_PORTFOLIO_GUILD_ID = MAIN_PORTFOLIO_SERVER_ID || null;
 const MAIN_ARATA_DEVELOPER_ROLE_ID = "1467459331518632076";
 const AUDIT_CHANNEL_ID = AUDIT_LOG_CHANNEL_ID || "1471800781349978212";
 const ROSTER_CHANNEL_ID = DEV_ROSTER_CHANNEL_ID || AUDIT_CHANNEL_ID;
@@ -540,6 +551,16 @@ const resolvePartnerTargetGuild = async () => {
   const welcomeChannel = await client.channels.fetch(PARTNER_WELCOME_CH_ID).catch(() => null);
   if (!welcomeChannel?.guild) return null;
   return welcomeChannel.guild;
+};
+
+const resolveMainPortfolioGuild = async () => {
+  if (MAIN_PORTFOLIO_GUILD_ID) {
+    const byId = await client.guilds.fetch(MAIN_PORTFOLIO_GUILD_ID).catch(() => null);
+    if (byId) return byId;
+  }
+  const byWelcomeChannel = await resolvePartnerTargetGuild();
+  if (byWelcomeChannel) return byWelcomeChannel;
+  return null;
 };
 
 const assignPartnerRoles = async (partnerData) => {
@@ -1313,8 +1334,9 @@ client.on("clientReady", () => {
         {
           type: 3,
           name: "role",
-          description: "Team role name, role ID, or role mention",
-          required: true
+          description: "Select the role to assign",
+          required: true,
+          choices: INSTANT_INVITE_ROLE_CHOICES
         }
       ]
     },
@@ -1719,7 +1741,6 @@ client.on("interactionCreate", async (interaction) => {
 
       const teamGuild = await client.guilds.fetch(TEAM_GUILD_ID).catch(() => null);
       if (!teamGuild) return interaction.editReply("Team server not found.");
-      await teamGuild.members.fetch();
       const teamRole = await resolveRoleInGuild(teamGuild, roleInput);
       if (!teamRole) return interaction.editReply("Team role not found. Use role name, role ID, or role mention.");
       if (teamRole.id === teamGuild.id) return interaction.editReply("Cannot use @everyone role.");
@@ -1751,7 +1772,7 @@ client.on("interactionCreate", async (interaction) => {
         }
       }
 
-      const mainGuild = await client.guilds.fetch(GUILD_ID).catch(() => null);
+      const mainGuild = await resolveMainPortfolioGuild();
       let mainDevRoleAdded = false;
       if (mainGuild) {
         const mainMember = await mainGuild.members.fetch(userId).catch(() => null);
@@ -1808,9 +1829,13 @@ client.on("interactionCreate", async (interaction) => {
       }
 
       let mainRoleRemoved = false;
-      const mainGuild = await client.guilds.fetch(GUILD_ID).catch(() => null);
+      let mainGuildId = null;
+      let mainMemberFound = false;
+      const mainGuild = await resolveMainPortfolioGuild();
       if (mainGuild) {
+        mainGuildId = mainGuild.id;
         const mainMember = await mainGuild.members.fetch(userId).catch(() => null);
+        mainMemberFound = Boolean(mainMember);
         if (mainMember?.roles?.cache?.has(MAIN_ARATA_DEVELOPER_ROLE_ID)) {
           await mainMember.roles.remove(MAIN_ARATA_DEVELOPER_ROLE_ID, `kickmem by ${interaction.user.id}`).catch(() => {});
           mainRoleRemoved = true;
@@ -1824,6 +1849,8 @@ client.on("interactionCreate", async (interaction) => {
           kickedFromTeam: kicked,
           removedTeamRoles: removedTeamRoles.join(", ") || "none",
           removedMainDeveloperRole: mainRoleRemoved,
+          mainGuildId: mainGuildId || "not_found",
+          mainMemberFound,
           reason,
           kickedBy: interaction.user.id
         },
