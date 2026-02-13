@@ -4,7 +4,7 @@ import axios from "axios";
 import dotenv from "dotenv";
 import cors from "cors";
 import Stripe from "stripe";
-import { Client, GatewayIntentBits, Partials, REST, Routes } from "discord.js";
+import { Client, GatewayIntentBits, Partials, PermissionsBitField, REST, Routes } from "discord.js";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import fs from "fs";
 import path from "path";
@@ -202,6 +202,18 @@ const INQUIRY_CHANNEL_ID = CONTACT_CHANNEL_ID || "1468028979666751707";
 const PARTNER_REQUEST_CHANNEL_ID = PARTNER_CHANNEL_ID || "1471770824573714432";
 const PARTNER_ROLE_ID = PARTNER_BASE_ROLE_ID || "1471787925531267092";
 const PARTNER_WELCOME_CH_ID = PARTNER_WELCOME_CHANNEL_ID || "1471788287923454056";
+const PARTNER_COLOR_PRESETS = {
+  red: "#ef4444",
+  orange: "#f97316",
+  yellow: "#eab308",
+  green: "#22c55e",
+  cyan: "#06b6d4",
+  blue: "#3b82f6",
+  purple: "#8b5cf6",
+  pink: "#ec4899",
+  white: "#f8fafc",
+  gray: "#94a3b8"
+};
 const commandLastUse = new Map();
 const commandCooldownMs = {
   ping: 3000,
@@ -323,6 +335,48 @@ const toPartnerRoleName = (serverName) => {
   return cleaned.slice(0, 95);
 };
 
+const parsePartnerColorInput = (raw) => {
+  const value = String(raw || "").trim().toLowerCase();
+  if (!value) return null;
+  if (PARTNER_COLOR_PRESETS[value]) return PARTNER_COLOR_PRESETS[value];
+  const hex = value.startsWith("#") ? value : `#${value}`;
+  if (/^#[0-9a-f]{6}$/i.test(hex)) return hex;
+  return null;
+};
+
+const getAcceptedPartnerByUserId = (userId) => {
+  const partners = loadPartners();
+  const entries = Object.entries(partners);
+  const match = entries
+    .map(([messageId, data]) => ({ messageId, data }))
+    .reverse()
+    .find((item) => item.data?.requesterUserId === userId && item.data?.status === "accepted");
+  return match || null;
+};
+
+const setAcceptedPartnerRoleColor = async (userId, colorHex) => {
+  const accepted = getAcceptedPartnerByUserId(userId);
+  if (!accepted) return { ok: false, error: "no_accepted_partner" };
+
+  const roleName = accepted.data?.roleName || toPartnerRoleName(accepted.data?.serverName);
+  const guild = await resolvePartnerTargetGuild();
+  if (!guild) return { ok: false, error: "guild_not_found" };
+
+  const role = guild.roles.cache.find((r) => r.name.toLowerCase() === String(roleName).toLowerCase());
+  if (!role) return { ok: false, error: "role_not_found" };
+
+  await role.setColor(colorHex, `Partner color set by ${userId}`);
+
+  const partners = loadPartners();
+  if (partners[accepted.messageId]) {
+    partners[accepted.messageId].roleName = role.name;
+    partners[accepted.messageId].roleColor = colorHex;
+    savePartners(partners);
+  }
+
+  return { ok: true, roleName: role.name, roleColor: colorHex };
+};
+
 const resolvePartnerTargetGuild = async () => {
   if (!PARTNER_WELCOME_CH_ID) return null;
   const welcomeChannel = await client.channels.fetch(PARTNER_WELCOME_CH_ID).catch(() => null);
@@ -343,6 +397,8 @@ const assignPartnerRoles = async (partnerData) => {
   if (!serverRole) {
     serverRole = await guild.roles.create({
       name: roleName,
+      permissions: new PermissionsBitField(0n),
+      hoist: false,
       mentionable: false,
       reason: `Partner accepted: ${partnerData.serverName}`
     });
@@ -1085,7 +1141,10 @@ client.on("messageReactionAdd", async (reaction, user) => {
         const requester = await client.users.fetch(partnerData.requesterUserId);
         await requester.send(
           `We at Arata Interactive are very happy to partner with your server ${partnerData.serverName}!\n` +
-          `Main Server: ${MAIN_SERVER_LINK}`
+          `Main Server: ${MAIN_SERVER_LINK}\n\n` +
+          `If you want your custom partner role color, DM me one of these preset names:\n` +
+          `${Object.keys(PARTNER_COLOR_PRESETS).join(", ")}\n` +
+          `or send a hex color like: #8b5cf6`
         );
       } catch (e) {
         console.error("Partner requester DM failed:", e?.message || e);
@@ -1231,6 +1290,39 @@ client.on("guildMemberAdd", async (member) => {
     }
   } catch (e) {
     console.error("guildMemberAdd failed:", e?.message || e);
+  }
+});
+
+client.on("messageCreate", async (message) => {
+  try {
+    if (!message || message.author?.bot) return;
+    if (message.guild) return;
+
+    const content = String(message.content || "").trim();
+    if (!content) return;
+
+    const accepted = getAcceptedPartnerByUserId(message.author.id);
+    if (!accepted) return;
+
+    const colorHex = parsePartnerColorInput(content);
+    if (!colorHex) {
+      await message.channel.send(
+        `Invalid color. Send one preset (${Object.keys(PARTNER_COLOR_PRESETS).join(", ")}) or a hex like #8b5cf6`
+      );
+      return;
+    }
+
+    const result = await setAcceptedPartnerRoleColor(message.author.id, colorHex);
+    if (!result.ok) {
+      await message.channel.send("I could not update your role color right now. Ask staff to check role setup.");
+      return;
+    }
+
+    await message.channel.send(
+      `Done. Your partner role color was set to ${result.roleColor} for role ${result.roleName}.`
+    );
+  } catch (e) {
+    console.error("Partner color DM handler failed:", e?.message || e);
   }
 });
 
