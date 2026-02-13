@@ -30,6 +30,8 @@ const {
   PARTNER_CHANNEL_ID,
   PARTNER_BASE_ROLE_ID,
   PARTNER_WELCOME_CHANNEL_ID,
+  AUDIT_LOG_CHANNEL_ID,
+  DEV_ROSTER_CHANNEL_ID,
   TEAM_SERVER_ID,
   DEV_ROLE_ID,
   ROLE_SCRIPTER_ID,
@@ -117,6 +119,8 @@ const formOnly = multer();
 const dataDir = path.join(__dirname, "data");
 const appsFile = path.join(dataDir, "applications.json");
 const partnerFile = path.join(dataDir, "partners.json");
+const auditLogFile = path.join(dataDir, "audit.log");
+const rosterStateFile = path.join(dataDir, "dev_roster.json");
 const runtimeState = {
   apply: { lastSuccessAt: null, lastErrorAt: null, lastError: null },
   contact: { lastSuccessAt: null, lastErrorAt: null, lastError: null }
@@ -125,11 +129,15 @@ const runtimeState = {
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 if (!fs.existsSync(appsFile)) fs.writeFileSync(appsFile, JSON.stringify({}));
 if (!fs.existsSync(partnerFile)) fs.writeFileSync(partnerFile, JSON.stringify({}));
+if (!fs.existsSync(auditLogFile)) fs.writeFileSync(auditLogFile, "");
+if (!fs.existsSync(rosterStateFile)) fs.writeFileSync(rosterStateFile, JSON.stringify({}));
 
 const loadApplications = () => JSON.parse(fs.readFileSync(appsFile, "utf-8") || "{}");
 const saveApplications = (data) => fs.writeFileSync(appsFile, JSON.stringify(data, null, 2));
 const loadPartners = () => JSON.parse(fs.readFileSync(partnerFile, "utf-8") || "{}");
 const savePartners = (data) => fs.writeFileSync(partnerFile, JSON.stringify(data, null, 2));
+const loadRosterState = () => JSON.parse(fs.readFileSync(rosterStateFile, "utf-8") || "{}");
+const saveRosterState = (data) => fs.writeFileSync(rosterStateFile, JSON.stringify(data, null, 2));
 
 const logEnvDiagnostics = () => {
   const checks = [
@@ -142,6 +150,8 @@ const logEnvDiagnostics = () => {
     ["PARTNER_CHANNEL_ID", Boolean(PARTNER_REQUEST_CHANNEL_ID), "Partner via bot channel"],
     ["PARTNER_BASE_ROLE_ID", Boolean(PARTNER_ROLE_ID), "Partner base role for accepted partners"],
     ["PARTNER_WELCOME_CHANNEL_ID", Boolean(PARTNER_WELCOME_CH_ID), "Partner welcome ping channel"],
+    ["AUDIT_LOG_CHANNEL_ID", Boolean(AUDIT_CHANNEL_ID), "Audit log channel"],
+    ["DEV_ROSTER_CHANNEL_ID", Boolean(ROSTER_CHANNEL_ID), "Developer roster channel"],
     ["S3 config", Boolean(S3_ENDPOINT && S3_BUCKET && S3_ACCESS_KEY && S3_SECRET_KEY), "Resume URL storage"]
   ];
   checks.forEach(([name, ok, note]) => {
@@ -202,6 +212,8 @@ const INQUIRY_CHANNEL_ID = CONTACT_CHANNEL_ID || "1468028979666751707";
 const PARTNER_REQUEST_CHANNEL_ID = PARTNER_CHANNEL_ID || "1471770824573714432";
 const PARTNER_ROLE_ID = PARTNER_BASE_ROLE_ID || "1471787925531267092";
 const PARTNER_WELCOME_CH_ID = PARTNER_WELCOME_CHANNEL_ID || "1471788287923454056";
+const AUDIT_CHANNEL_ID = AUDIT_LOG_CHANNEL_ID || "1471800781349978212";
+const ROSTER_CHANNEL_ID = DEV_ROSTER_CHANNEL_ID || AUDIT_CHANNEL_ID;
 const PARTNER_COLOR_PRESETS = {
   red: "#ef4444",
   orange: "#f97316",
@@ -223,7 +235,11 @@ const commandCooldownMs = {
   dmuser: 12000,
   setappstatus: 6000,
   resendinvite: 12000,
-  lookupdiscord: 6000
+  lookupdiscord: 6000,
+  partnerstatus: 5000,
+  partnerrolefix: 7000,
+  partnerremove: 7000,
+  devskillsrefresh: 6000
 };
 
 const invitesCache = new Map();
@@ -375,6 +391,129 @@ const setAcceptedPartnerRoleColor = async (userId, colorHex) => {
   }
 
   return { ok: true, roleName: role.name, roleColor: colorHex };
+};
+
+const appendAuditLog = async (eventType, payload = {}, actorId = null) => {
+  const entry = {
+    ts: new Date().toISOString(),
+    eventType,
+    actorId,
+    ...payload
+  };
+  fs.appendFileSync(auditLogFile, `${JSON.stringify(entry)}\n`);
+  if (!AUDIT_CHANNEL_ID || !client.isReady()) return;
+  try {
+    const ch = await client.channels.fetch(AUDIT_CHANNEL_ID);
+    if (ch?.isTextBased?.()) {
+      const summary = Object.entries(payload)
+        .slice(0, 6)
+        .map(([k, v]) => `${k}: ${String(v)}`)
+        .join("\n");
+      await ch.send(
+        `Audit: ${eventType}\n` +
+        `Actor: ${actorId ? `<@${actorId}>` : "system"}\n` +
+        (summary ? `${summary}` : "")
+      );
+    }
+  } catch (e) {
+    console.error("Audit channel send failed:", e?.message || e);
+  }
+};
+
+const findPartnerEntry = (query) => {
+  const partners = loadPartners();
+  const q = String(query || "").trim();
+  const entries = Object.entries(partners).map(([messageId, data]) => ({ messageId, data }));
+  const byRequestId = entries.find((e) => e.data?.requestId === q);
+  if (byRequestId) return { partners, match: byRequestId };
+  const byUserId = entries
+    .filter((e) => e.data?.requesterUserId === q)
+    .sort((a, b) => (a.data?.requestId || "").localeCompare(b.data?.requestId || ""))
+    .pop();
+  if (byUserId) return { partners, match: byUserId };
+  return { partners, match: null };
+};
+
+const removePartnerRoles = async (partnerData) => {
+  const guild = await resolvePartnerTargetGuild();
+  if (!guild) return { ok: false, error: "guild_not_found" };
+  const member = await guild.members.fetch(partnerData.requesterUserId).catch(() => null);
+  const roleName = partnerData.roleName || toPartnerRoleName(partnerData.serverName);
+  const customRole = guild.roles.cache.find((r) => r.name.toLowerCase() === String(roleName).toLowerCase()) || null;
+  const roleIds = [PARTNER_ROLE_ID, customRole?.id].filter(Boolean);
+  if (member && roleIds.length) {
+    await member.roles.remove(roleIds, "Partner removed");
+  }
+  if (customRole && customRole.members.size === 0) {
+    await customRole.delete("Partner removed and no members left").catch(() => {});
+  }
+  return { ok: true, removedRoleName: customRole?.name || roleName, hadMember: Boolean(member) };
+};
+
+const mapRoleToSkill = (roleName) => {
+  const name = String(roleName || "").toLowerCase();
+  if (name.includes("script") || name.includes("program")) return "Scripting";
+  if (name.includes("vfx")) return "VFX";
+  if (name.includes("sfx")) return "SFX";
+  if (name.includes("anim")) return "Animation";
+  if (name.includes("gui") || name.includes("ui")) return "GUI / UI";
+  if (name.includes("map")) return "Map Making";
+  if (name.includes("model")) return "Modeling";
+  if (name.includes("graphic")) return "Graphic Arts";
+  if (name.includes("hr")) return "HR";
+  return null;
+};
+
+const buildDeveloperRosterText = async (guild) => {
+  const members = await guild.members.fetch();
+  const rows = [];
+  members.forEach((m) => {
+    if (m.user?.bot) return;
+    const roleNames = m.roles.cache
+      .filter((r) => r.id !== guild.id)
+      .map((r) => r.name);
+    const skills = [...new Set(roleNames.map(mapRoleToSkill).filter(Boolean))];
+    const hasDevMarker =
+      m.roles.cache.has(DEV_ROLE) ||
+      roleNames.some((name) => /(script|program|vfx|sfx|anim|gui|ui|map|model|graphic|hr)/i.test(name));
+    if (!hasDevMarker) return;
+    rows.push({ id: m.id, skills });
+  });
+  rows.sort((a, b) => a.id.localeCompare(b.id));
+  const lines = [
+    "━━━━━━━━━━━━━━━━━━━━",
+    "TEAM ROSTER",
+    "━━━━━━━━━━━━━━━━━━━━"
+  ];
+  for (const row of rows) {
+    lines.push(`<@${row.id}> — ${row.skills.length ? row.skills.join(", ") : "Developer"}`);
+  }
+  lines.push("━━━━━━━━━━━━━━━━━━━━");
+  return lines.join("\n");
+};
+
+const refreshDeveloperRoster = async (reason = "manual", actorId = null) => {
+  if (!client.isReady() || !ROSTER_CHANNEL_ID) return { ok: false, error: "roster_channel_not_configured" };
+  const channel = await client.channels.fetch(ROSTER_CHANNEL_ID).catch(() => null);
+  if (!channel?.isTextBased?.()) return { ok: false, error: "roster_channel_invalid" };
+  const guild = channel.guild;
+  if (!guild) return { ok: false, error: "roster_guild_not_found" };
+  const text = await buildDeveloperRosterText(guild);
+  const state = loadRosterState();
+  const key = String(guild.id);
+  let message = null;
+  if (state[key]?.messageId) {
+    message = await channel.messages.fetch(state[key].messageId).catch(() => null);
+  }
+  if (message) {
+    await message.edit(text);
+  } else {
+    const sent = await channel.send(text);
+    state[key] = { channelId: channel.id, messageId: sent.id };
+    saveRosterState(state);
+  }
+  await appendAuditLog("dev_roster_refresh", { reason, channelId: channel.id }, actorId);
+  return { ok: true, channelId: channel.id };
 };
 
 const resolvePartnerTargetGuild = async () => {
@@ -881,6 +1020,13 @@ app.post("/partner-apply", formOnly.none(), async (req, res) => {
       acceptedBy: null
     };
     savePartners(partners);
+    await appendAuditLog("partner_request_submitted", {
+      requestId: generatedId,
+      requesterUserId: cleanUserId,
+      requesterUsername: cleanUsername,
+      serverName: cleanServerName,
+      messageId
+    });
     return res.json({ ok: true, messageId, partnerRequestId: generatedId });
   } catch (err) {
     console.error("Partner apply failed:", err?.response?.status, err?.response?.data || err?.message || err);
@@ -971,6 +1117,7 @@ client.on("clientReady", () => {
         }
       }
       if (changed) savePartners(partners);
+      await refreshDeveloperRoster("startup_sync", null).catch(() => {});
     } catch (e) {
       console.error("Partner pending-role sync failed:", e?.message || e);
     }
@@ -1093,11 +1240,51 @@ client.on("clientReady", () => {
           required: true
         }
       ]
+    },
+    {
+      name: "partnerstatus",
+      description: "Lookup partner request by request ID or user ID (staff only)",
+      options: [
+        {
+          type: 3,
+          name: "query",
+          description: "PR-... request id or Discord user id",
+          required: true
+        }
+      ]
+    },
+    {
+      name: "partnerrolefix",
+      description: "Retry partner role assignment (staff only)",
+      options: [
+        {
+          type: 3,
+          name: "query",
+          description: "PR-... request id or Discord user id",
+          required: true
+        }
+      ]
+    },
+    {
+      name: "partnerremove",
+      description: "Remove partner roles and mark request removed (staff only)",
+      options: [
+        {
+          type: 3,
+          name: "query",
+          description: "PR-... request id or Discord user id",
+          required: true
+        }
+      ]
+    },
+    {
+      name: "devskillsrefresh",
+      description: "Refresh TEAM ROSTER message from current member roles (staff only)"
     }
   ];
 
   rest.put(Routes.applicationGuildCommands(DISCORD_CLIENT_ID, GUILD_ID), { body: commands })
-    .then(() => console.log("Slash commands registered: /reply /ping /botstatus /appstatus /dmuser /setappstatus /resendinvite /lookupdiscord"))
+    .then(() => console.log("Slash commands registered: /reply /ping /botstatus /appstatus /dmuser /setappstatus /resendinvite /lookupdiscord /partnerstatus /partnerrolefix /partnerremove /devskillsrefresh"))
     .catch((e) => console.error("Slash command register failed:", e?.message || e));
 });
 
@@ -1136,6 +1323,18 @@ client.on("messageReactionAdd", async (reaction, user) => {
       partnerData.pendingRoleAssignment = !roleResult.assigned;
       partnerData.pendingRoleReason = roleResult.reason || null;
       savePartners(partners);
+      await appendAuditLog(
+        "partner_accept",
+        {
+          requestId: partnerData.requestId,
+          requesterUserId: partnerData.requesterUserId,
+          requesterUsername: partnerData.requesterUsername,
+          assignedRoles: roleResult.assigned,
+          roleName: partnerData.roleName || null,
+          pendingRoleReason: partnerData.pendingRoleReason || null
+        },
+        user.id
+      );
 
       try {
         const requester = await client.users.fetch(partnerData.requesterUserId);
@@ -1190,6 +1389,11 @@ client.on("messageReactionAdd", async (reaction, user) => {
       }
 
       saveApplications(apps);
+      await appendAuditLog(
+        "application_accept",
+        { applicantDiscordId: appData.discord_id, position: appData.position || null, messageId: reaction.message.id },
+        user.id
+      );
 
       const acceptMsg =
         `You have been accepted to Arata Interactive!\n` +
@@ -1206,6 +1410,11 @@ client.on("messageReactionAdd", async (reaction, user) => {
     } else if (isReject) {
       appData.status = "denied";
       saveApplications(apps);
+      await appendAuditLog(
+        "application_deny",
+        { applicantDiscordId: appData.discord_id, messageId: reaction.message.id },
+        user.id
+      );
       try {
         await dmUser.send("Sorry, you've been denied :(");
       } catch (e) {
@@ -1242,6 +1451,7 @@ client.on("guildMemberAdd", async (member) => {
           savePartners(partners);
         }
       }
+      await refreshDeveloperRoster("member_join", null).catch(() => {});
     }
 
     if (member.guild.id !== TEAM_GUILD_ID) return;
@@ -1288,6 +1498,7 @@ client.on("guildMemberAdd", async (member) => {
     } catch (notifyErr) {
       console.error("Owner notify failed:", notifyErr?.message || notifyErr);
     }
+    await refreshDeveloperRoster("member_join", null).catch(() => {});
   } catch (e) {
     console.error("guildMemberAdd failed:", e?.message || e);
   }
@@ -1317,6 +1528,11 @@ client.on("messageCreate", async (message) => {
       await message.channel.send("I could not update your role color right now. Ask staff to check role setup.");
       return;
     }
+    await appendAuditLog(
+      "partner_role_color_update",
+      { userId: message.author.id, roleName: result.roleName, roleColor: result.roleColor },
+      message.author.id
+    );
 
     await message.channel.send(
       `Done. Your partner role color was set to ${result.roleColor} for role ${result.roleName}.`
@@ -1329,7 +1545,7 @@ client.on("messageCreate", async (message) => {
 client.on("interactionCreate", async (interaction) => {
   try {
     if (!interaction.isChatInputCommand()) return;
-    if (!["reply", "ping", "botstatus", "appstatus", "dmuser", "setappstatus", "resendinvite", "lookupdiscord"].includes(interaction.commandName)) return;
+    if (!["reply", "ping", "botstatus", "appstatus", "dmuser", "setappstatus", "resendinvite", "lookupdiscord", "partnerstatus", "partnerrolefix", "partnerremove", "devskillsrefresh"].includes(interaction.commandName)) return;
     const cooldownKey = `${interaction.commandName}:${interaction.user.id}`;
     const cooldown = commandCooldownMs[interaction.commandName] || 5000;
     const lastUse = commandLastUse.get(cooldownKey) || 0;
@@ -1412,6 +1628,78 @@ client.on("interactionCreate", async (interaction) => {
         `Status: ${value.status || "pending"}\n` +
         `Position: ${value.position || "unknown"}`
       );
+    }
+
+    if (interaction.commandName === "devskillsrefresh") {
+      const refresh = await refreshDeveloperRoster("manual_command", interaction.user.id);
+      if (!refresh.ok) return interaction.editReply(`Roster refresh failed: ${refresh.error}`);
+      return interaction.editReply(`TEAM ROSTER refreshed in <#${refresh.channelId}>.`);
+    }
+
+    if (["partnerstatus", "partnerrolefix", "partnerremove"].includes(interaction.commandName)) {
+      const query = interaction.options.getString("query", true);
+      const { partners, match } = findPartnerEntry(query);
+      if (!match) return interaction.editReply("Partner request not found.");
+      const { messageId, data } = match;
+
+      if (interaction.commandName === "partnerstatus") {
+        return interaction.editReply(
+          `Partner request found\n` +
+          `Message ID: ${messageId}\n` +
+          `Request ID: ${data.requestId}\n` +
+          `User ID: ${data.requesterUserId}\n` +
+          `Server: ${data.serverName}\n` +
+          `Status: ${data.status || "pending"}\n` +
+          `Role: ${data.roleName || toPartnerRoleName(data.serverName)}\n` +
+          `Pending Role Assignment: ${data.pendingRoleAssignment ? "yes" : "no"}`
+        );
+      }
+
+      if (interaction.commandName === "partnerrolefix") {
+        if (data.status !== "accepted") {
+          return interaction.editReply("That partner request is not accepted yet.");
+        }
+        const roleResult = await assignPartnerRoles(data).catch((e) => {
+          console.error("partnerrolefix failed:", e?.message || e);
+          return { assigned: false, reason: "role_assign_exception" };
+        });
+        data.roleName = roleResult.roleName || data.roleName || toPartnerRoleName(data.serverName);
+        data.pendingRoleAssignment = !roleResult.assigned;
+        data.pendingRoleReason = roleResult.reason || null;
+        partners[messageId] = data;
+        savePartners(partners);
+        await appendAuditLog(
+          "partner_role_fix",
+          { requestId: data.requestId, userId: data.requesterUserId, assigned: roleResult.assigned, reason: roleResult.reason || null },
+          interaction.user.id
+        );
+        return interaction.editReply(roleResult.assigned
+          ? `Partner roles reapplied for ${data.requesterUsername} (${data.requestId}).`
+          : `Partner role fix pending: ${roleResult.reason || "unknown_error"}.`);
+      }
+
+      if (interaction.commandName === "partnerremove") {
+        const removed = await removePartnerRoles(data).catch((e) => {
+          console.error("partnerremove failed:", e?.message || e);
+          return { ok: false, error: "role_remove_exception" };
+        });
+        data.status = "removed";
+        data.removedBy = interaction.user.id;
+        data.removedByTag = interaction.user.tag || interaction.user.username || "unknown";
+        data.removedAt = new Date().toISOString();
+        data.pendingRoleAssignment = false;
+        data.pendingRoleReason = null;
+        partners[messageId] = data;
+        savePartners(partners);
+        await appendAuditLog(
+          "partner_remove",
+          { requestId: data.requestId, userId: data.requesterUserId, removedOk: removed.ok, reason: removed.error || null },
+          interaction.user.id
+        );
+        return interaction.editReply(removed.ok
+          ? `Partner removed for ${data.requesterUsername} (${data.requestId}).`
+          : `Partner marked removed but role removal failed: ${removed.error || "unknown_error"}.`);
+      }
     }
 
     const msgId = interaction.options.getString("message_id", true);
