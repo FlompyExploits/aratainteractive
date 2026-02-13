@@ -258,7 +258,7 @@
         const formData = new FormData(applyForm);
         const res = await fetch(APPLY_ENDPOINT, { method: "POST", body: formData });
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data?.error || `Failed (status ${res.status})`);
+        if (!res.ok || !data?.ok) throw new Error(data?.error || `Failed (status ${res.status})`);
         applyForm.reset();
         applyStatus.textContent = "Application submitted! Expect a response soon.";
       } catch (err) {
