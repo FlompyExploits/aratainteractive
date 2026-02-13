@@ -165,8 +165,8 @@
         .time-info { display: flex; justify-content: space-between; font-size: 0.6rem; color: #444; font-family: 'JetBrains Mono', monospace; margin-top: 6px; }
 
         /* Main Content */
-        html { scroll-behavior: smooth; }
-        main { flex: 1; overflow-y: auto; position: relative; scroll-behavior: smooth; z-index: 10; }
+        html { scroll-behavior: auto; }
+        main { flex: 1; overflow-y: auto; position: relative; scroll-behavior: auto; z-index: 10; -webkit-overflow-scrolling: touch; }
         main::-webkit-scrollbar { width: 6px; }
         main::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
 
@@ -1996,6 +1996,26 @@
             brimo: { title: "GET IN THE RING", artist: "Max", url: "assets/brimo_song.mp4" }
         };
 
+        // Add new people here. This keeps onboarding in one place.
+        const customMembers = [
+            {
+                key: "ninja",
+                name: "Ninjaarll",
+                discordId: "1178798471545901089",
+                discordUsername: "ninjaarll",
+                role: "Support",
+                roleTag: "@Arata Support",
+                themeColor: "229, 229, 229",
+                banner: "assets/ninja_banner.jpg",
+                song: { title: "Jujutsu Kaisen OP", artist: "TOHO animation", url: "assets/ninja_song.mp4" },
+                socials: [
+                    { type: "discord", url: "https://discord.com/users/1178798471545901089" }
+                ],
+                stats: ["Support"],
+                bio: "Crafting digital experiences for Arata Interactive."
+            }
+        ];
+
         let partners = [
             { name: "Open Slot" },
             { name: "Open Slot" }
@@ -2174,6 +2194,89 @@
             { key: "k", name: "K", role: "Founder", roleTag: "@Arata Founder", handle: "@k", img: "https://cdn.discordapp.com/embed/avatars/3.png", profile: "https://www.roblox.com/users/444448274/profile" }
         ];
 
+        function socialButtonHtml(social) {
+            if (!social || !social.url) return "";
+            if (social.type === "discord") {
+                return `<a href="${social.url}" target="_blank" class="social-btn round"><i class="fa-brands fa-discord"></i></a>`;
+            }
+            if (social.type === "roblox") {
+                return `<a href="${social.url}" target="_blank" class="social-btn round"><i class="fa-solid fa-gamepad"></i></a>`;
+            }
+            return `<a href="${social.url}" target="_blank" class="social-btn round"><i class="fa-solid fa-link"></i></a>`;
+        }
+
+        function buildDynamicMemberPage(member) {
+            const key = member.key;
+            const stats = (member.stats || ["Support"]).map((item) => `<span class="stat-item">${item}</span>`).join("");
+            const socials = (member.socials || []).map(socialButtonHtml).join("");
+            return `
+                <div id="${key}" class="page">
+                    <img src="" class="profile-banner" id="banner-${key}" loading="lazy" decoding="async">
+                    <div class="profile-hero">
+                        <div class="pfp-box">
+                            <img src="" class="pfp-img" loading="lazy" decoding="async">
+                            <div class="status-badge" id="status-${key}"></div>
+                        </div>
+                        <div class="user-info">
+                            <div class="hero-status"><span class="status-dot"></span> Available for work</div>
+                            <h1>${member.name}</h1>
+                            <p class="hero-blurb">${member.bio || "Crafting digital experiences for Arata Interactive."}</p>
+                            <div class="stats-col">${stats}</div>
+                            <div class="socials-row">${socials}</div>
+                            <div id="rp-${key}" class="rp-card" style="display:none;">
+                                <div class="rp-image-box"><img id="rp-img-${key}" class="rp-large" loading="lazy" decoding="async"><img id="rp-small-${key}" class="rp-small" style="display:none;" loading="lazy" decoding="async"></div>
+                                <div class="rp-details"><div class="rp-name" id="rp-name-${key}">Playing</div><div class="rp-state" id="rp-details-${key}"></div><div class="rp-time" id="rp-state-${key}"></div></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="section-title"><i class="fa-solid fa-star"></i> Projects</div><div class="grid" id="${key}-grid"></div>
+                    <div class="section-title"><i class="fa-solid fa-code"></i> Contributions</div><div class="grid" id="${key}-contribs"></div>
+                </div>
+            `;
+        }
+
+        function registerCustomMembers() {
+            const aside = document.querySelector("aside");
+            const player = aside ? aside.querySelector(".player") : null;
+            const main = document.querySelector("main");
+            customMembers.forEach((member) => {
+                if (!member || !member.key || !member.discordId || !member.name) return;
+                const key = member.key;
+                userIds[key] = member.discordId;
+                defaultBanners[key] = member.banner || defaultBanners[key] || "";
+                songs[key] = member.song || songs[key] || null;
+                themeColors[key] = member.themeColor || themeColors[key] || "229, 229, 229";
+                if (!database[key]) {
+                    database[key] = {
+                        main: member.projects || [],
+                        contribs: member.contribs || []
+                    };
+                }
+                if (!creatorsData.some((c) => c.key === key)) {
+                    creatorsData.push({
+                        key,
+                        name: member.name,
+                        role: member.role || "Support",
+                        roleTag: member.roleTag || "@Arata Support",
+                        handle: `@${member.discordUsername || key}`,
+                        img: "https://cdn.discordapp.com/embed/avatars/0.png",
+                        profile: member.profile || `https://discord.com/users/${member.discordId}`
+                    });
+                }
+                if (player && !document.getElementById(`nav-${key}`)) {
+                    player.insertAdjacentHTML("beforebegin", `
+                        <div class="nav-btn" id="nav-${key}" onclick="tab('${key}')">
+                            <img src="https://cdn.discordapp.com/embed/avatars/0.png" loading="lazy" decoding="async">
+                            <span class="nav-text"><span class="nav-name">${member.name}</span><span class="nav-role">${member.roleTag || "@Arata Support"}</span></span>
+                        </div>
+                    `);
+                }
+                if (main && !document.getElementById(key)) {
+                    main.insertAdjacentHTML("beforeend", buildDynamicMemberPage(member));
+                }
+            });
+        }
+
         let currentTheme = 'home';
         let userInteracted = false;
         let pendingPlay = false;
@@ -2248,18 +2351,10 @@
             const dupGrid = document.getElementById("dup-grid");
             if (!dupGrid) return;
             const byTitle = new Map();
-            const displayNames = {
-                ren: "Ren",
-                m1: "M1",
-                k: "K",
-                zero: "Zero",
-                lummy: "LummY",
-                sleepy: "Sleepy",
-                cazu: "Cazu",
-                aizen: "Aizen",
-                eli: "Eli",
-                brimo: "Brimo"
-            };
+            const displayNames = {};
+            creatorsData.forEach((creator) => {
+                displayNames[creator.key] = creator.name;
+            });
             Object.keys(database).forEach(key => {
                 database[key].contribs.forEach(item => {
                     if (!byTitle.has(item.title)) byTitle.set(item.title, new Set());
@@ -2350,6 +2445,8 @@
             `}).join('');
         }
         
+        registerCustomMembers();
+
         Object.keys(database).forEach(key => {
             render(`${key}-grid`, database[key].main);
             render(`${key}-contribs`, database[key].contribs);
@@ -2415,14 +2512,10 @@
                 dHtml += '</div>';
 
                 dHtml += '<div class="dd-group"><div class="dd-title">Supporting</div>';
-                dHtml += `<div class="dd-item" onclick="tab('k')">K</div>`;
-                dHtml += `<div class="dd-item" onclick="tab('zero')">Zero</div>`;
-                dHtml += `<div class="dd-item" onclick="tab('eli')">Eli</div>`;
-                dHtml += `<div class="dd-item" onclick="tab('aizen')">Aizen</div>`;
-                dHtml += `<div class="dd-item" onclick="tab('lummy')">LummY</div>`;
-                dHtml += `<div class="dd-item" onclick="tab('sleepy')">Sleepy</div>`;
-                dHtml += `<div class="dd-item" onclick="tab('cazu')">Cazu</div>`;
-                dHtml += `<div class="dd-item" onclick="tab('brimo')">Brimo</div>`;
+                creatorsData.forEach((creator) => {
+                    if (creator.key === "ren" || creator.key === "m1") return;
+                    dHtml += `<div class="dd-item" onclick="tab('${creator.key}')">${creator.name}</div>`;
+                });
                 dHtml += '</div>';
 
                 dirList.innerHTML = dHtml;
@@ -2650,11 +2743,8 @@
                         }
 
                         const navBtnImg = document.querySelector(`#nav-${key} img`);
-                        if(navBtnImg && pfpUrl && (key === 'zero' || key === 'aizen')) {
-                             setImgSafe(navBtnImg, pfpUrl, fallbackAvatar);
-                        } else if(navBtnImg && d.discord_user.avatar && key !== 'zero' && key !== 'aizen') {
-                             const nUrl = `https://cdn.discordapp.com/avatars/${d.discord_user.id}/${d.discord_user.avatar}.png?size=128`;
-                             setImgSafe(navBtnImg, nUrl, fallbackAvatar);
+                        if (navBtnImg && pfpUrl) {
+                            setImgSafe(navBtnImg, pfpUrl, fallbackAvatar);
                         }
 
                         const handleEl = document.querySelector(`.creator-handle[data-discord-handle="${key}"]`);
@@ -2741,7 +2831,7 @@
         window.addEventListener('scroll', () => {
             if (!topBar) return;
             topBar.classList.remove('is-compact');
-        });
+        }, { passive: true });
 
         const themePresets = [
             { id: "midnight", name: "Midnight", accent: "99, 102, 241", bg: "#07090f", overlay: ["rgba(64, 80, 255, 0.08)", "rgba(10, 12, 22, 0.9)"] },
@@ -2813,16 +2903,14 @@
                         body: formData
                     });
                     const data = await res.json().catch(() => ({}));
-                if (res.ok && data.ok) {
+                    if (!res.ok || !data.ok) {
+                        throw new Error(data.error || `Failed to submit application (status ${res.status}).`);
+                    }
                     applyStatus.textContent = "Application sent! We'll review it soon.";
                     applyForm.reset();
-                } else {
-                    const errMsg = data.error || `Failed to submit application (status ${res.status}).`;
-                    applyStatus.textContent = errMsg;
+                } catch (err) {
+                    applyStatus.textContent = err?.message || "Failed to submit application. Please try again.";
                 }
-            } catch (err) {
-                applyStatus.textContent = "Failed to submit application. Please try again.";
-            }
         });
         }
 
@@ -2832,8 +2920,7 @@
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
                         entry.target.classList.add('is-visible');
-                    } else {
-                        entry.target.classList.remove('is-visible');
+                        revealObserver.unobserve(entry.target);
                     }
                 });
             }, { threshold: 0.15 });
