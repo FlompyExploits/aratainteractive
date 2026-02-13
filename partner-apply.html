@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arata Partner Apply</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Sora:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin:0;
+      font-family: "Sora", sans-serif;
+      color:#e6edf7;
+      background:
+        radial-gradient(900px 600px at 18% 0%, rgba(59,130,246,.22), transparent 65%),
+        radial-gradient(900px 700px at 85% 25%, rgba(139,92,246,.18), transparent 65%),
+        #070b12;
+      position: relative;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    body::before {
+      content:"";
+      position: fixed;
+      width: 44vw;
+      height: 44vw;
+      border-radius: 999px;
+      left: -14vw;
+      bottom: -18vw;
+      background: rgba(59,130,246,.45);
+      filter: blur(90px);
+      opacity: .3;
+      pointer-events: none;
+    }
+    .wrap { max-width: 860px; margin: 28px auto; padding: 0 14px; }
+    .top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: "Space Grotesk", sans-serif;
+      font-weight: 700;
+      letter-spacing: .03em;
+      text-transform: uppercase;
+    }
+    .logo {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: #fff;
+      color: #000;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      line-height: 1;
+    }
+    .top-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .nav-btn {
+      text-decoration: none;
+      color: #fff;
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 999px;
+      padding: 10px 16px;
+      font-weight: 700;
+      font-size: .88rem;
+      transition: transform .2s ease, filter .2s ease;
+    }
+    .nav-btn:hover { transform: translateY(-1px); filter: brightness(1.06); }
+    .nav-btn.home {
+      background: rgba(255,255,255,.06);
+    }
+    .nav-btn.apply {
+      background: linear-gradient(90deg, rgba(59,130,246,.85), rgba(139,92,246,.85));
+      box-shadow: 0 12px 26px rgba(59,130,246,.3);
+      border-color: rgba(147,197,253,.45);
+    }
+    .card {
+      background: linear-gradient(180deg, rgba(14,22,35,.95), rgba(9,14,23,.92));
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:16px;
+      padding:20px;
+      box-shadow: 0 30px 90px rgba(0,0,0,.45), 0 0 0 1px rgba(99,102,241,.12) inset;
+      position: relative;
+      overflow: hidden;
+    }
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: -35% -15% auto;
+      height: 220px;
+      background: radial-gradient(circle at center, rgba(99,102,241,.3), transparent 70%);
+      pointer-events: none;
+    }
+    h1 { margin:0 0 6px; font-size:1.45rem; font-family: "Space Grotesk", sans-serif; }
+    p { margin:0 0 14px; color:#aab6c7; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .full { grid-column:1 / -1; }
+    input, textarea, button { width:100%; border:1px solid rgba(255,255,255,.14); background:#0f1724; color:#e6edf7; border-radius:12px; padding:11px 12px; font-size:.92rem; }
+    textarea { min-height:120px; resize:vertical; }
+    button {
+      cursor:pointer;
+      font-weight:700;
+      border:none;
+      background:
+        radial-gradient(130% 140% at 26% 10%, rgba(255,255,255,.28), rgba(255,255,255,0) 60%),
+        linear-gradient(90deg,#3b82f6,#8b5cf6);
+      box-shadow: 0 14px 28px rgba(59,130,246,.3);
+      transition: transform .2s ease, filter .2s ease;
+    }
+    button:hover { transform: translateY(-1px); filter: brightness(1.05); }
+    .status { margin-top:10px; min-height:20px; color:#93c5fd; }
+    @media (max-width:700px){ .grid{grid-template-columns:1fr;} }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="brand">
+        <div class="logo">A</div>
+        <span>Arata Interactive</span>
+      </div>
+      <div class="top-actions">
+        <a class="nav-btn home" href="index.html">Back to Home</a>
+        <a class="nav-btn apply" href="apply.html">Wanna apply to join Arata Int? Apply here</a>
+      </div>
+    </div>
+    <div class="card">
+      <h1>Partner Application</h1>
+      <p>Send your partnership request to Arata Interactive.</p>
+      <form id="partner-form" class="grid">
+        <input class="full" name="server_name" placeholder="Server Name" required>
+        <input class="full" name="server_link" placeholder="Discord Server Link (https://discord.gg/...)" required>
+        <input name="username" placeholder="Your Username" required>
+        <input name="user_id" placeholder="Your User ID" required pattern="^[0-9]{17,20}$" title="17-20 digit Discord user ID">
+        <input name="member_count" placeholder="Member Count (Optional)">
+        <input name="activity" placeholder="Activity (Optional)">
+        <textarea class="full" name="reason" placeholder="Why do you want to partner?" required></textarea>
+        <button class="full" type="submit">Submit Partner Request</button>
+        <div class="status full" id="partner-status"></div>
+      </form>
+    </div>
+  </div>
+  <script>
+    const form = document.getElementById("partner-form");
+    const statusEl = document.getElementById("partner-status");
+    const ENDPOINT = "https://aratainteractive.onrender.com/partner-apply";
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      statusEl.textContent = "Sending request...";
+      try {
+        const formData = new FormData(form);
+        const res = await fetch(ENDPOINT, { method: "POST", body: formData });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok) throw new Error(data.error || `Failed (status ${res.status})`);
+        form.reset();
+        statusEl.textContent = `Request sent! Partner ID: ${data.partnerRequestId || "pending"}`;
+      } catch (err) {
+        statusEl.textContent = err?.message || "Failed to submit partner request.";
+      }
+    });
+  </script>
+</body>
+</html>

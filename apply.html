@@ -33,9 +33,33 @@
       display: flex;
       flex-direction: column;
       padding: 40px 20px;
+      position: relative;
+      overflow-x: hidden;
+    }
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      width: 46vw;
+      height: 46vw;
+      border-radius: 999px;
+      pointer-events: none;
+      filter: blur(80px);
+      opacity: 0.28;
+      z-index: 0;
+    }
+    body::before {
+      top: -18vw;
+      left: -12vw;
+      background: rgba(124, 58, 237, 0.7);
+    }
+    body::after {
+      bottom: -20vw;
+      right: -12vw;
+      background: rgba(6, 182, 212, 0.6);
     }
 
-    .page { max-width: 1100px; margin: 0 auto; width: 100%; }
+    .page { max-width: 1100px; margin: 0 auto; width: 100%; position: relative; z-index: 1; }
 
     .top {
       display: flex;
@@ -67,6 +91,13 @@
     .hero { text-align: center; margin-bottom: 30px; }
     .hero h1 { font-size: clamp(2rem, 4vw, 3.2rem); font-family: 'Space Grotesk', sans-serif; margin-bottom: 10px; }
     .hero p { color: var(--text-soft); }
+    .hero-actions {
+      margin-top: 14px;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
 
     .apply-card {
       margin-top: 24px;
@@ -75,6 +106,16 @@
       border-radius: 24px;
       padding: 26px;
       box-shadow: var(--glow);
+      position: relative;
+      overflow: hidden;
+    }
+    .apply-card::before {
+      content: "";
+      position: absolute;
+      inset: -40% -20% auto;
+      height: 220px;
+      background: radial-gradient(circle at center, rgba(139, 92, 246, 0.24), transparent 70%);
+      pointer-events: none;
     }
 
     .apply-roles {
@@ -160,6 +201,12 @@
         cursor: pointer;
     }
     .btn-neo:hover { transform: translateY(-2px); filter: brightness(1.05); }
+    .btn-partner {
+      background:
+        radial-gradient(120% 120% at 30% 20%, rgba(255,255,255,0.22), rgba(255,255,255,0) 60%),
+        linear-gradient(135deg, rgba(59, 130, 246, 0.65), rgba(124, 58, 237, 0.55));
+      box-shadow: 0 14px 34px rgba(37, 99, 235, 0.35);
+    }
 
     .btn-ghost {
         background: transparent;
@@ -189,6 +236,10 @@
     <div class="hero">
       <h1>Wanna join Arata Interactive?</h1>
       <p>All positions are open right now except Manager. Apply below.</p>
+      <div class="hero-actions">
+        <a href="partner-apply.html" class="btn-neo btn-partner">Wanna partner with Arata Int? Apply here</a>
+        <a href="index.html" class="btn-ghost">Back to Home</a>
+      </div>
       <div class="apply-roles">
         <span class="apply-role">Programmer</span>
         <span class="apply-role">QA</span>
