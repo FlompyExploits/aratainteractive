@@ -1996,8 +1996,8 @@
             brimo: { title: "GET IN THE RING", artist: "Max", url: "assets/brimo_song.mp4" }
         };
 
-        // Add new people here. This keeps onboarding in one place.
-        const customMembers = [
+        // Local fallback list. Primary source is /members API.
+        let customMembers = [
             {
                 key: "ninja",
                 name: "Ninjaarll",
@@ -2012,9 +2012,11 @@
                     { type: "discord", url: "https://discord.com/users/1178798471545901089" }
                 ],
                 stats: ["Support"],
-                bio: "Crafting digital experiences for Arata Interactive."
+                bio: "Crafting digital experiences for Arata Interactive.",
+                hideFromCreators: true
             }
         ];
+        const MEMBERS_ENDPOINT = "https://aratainteractive.onrender.com/members";
 
         let partners = [
             { name: "Open Slot" },
@@ -2205,6 +2207,24 @@
             return `<a href="${social.url}" target="_blank" class="social-btn round"><i class="fa-solid fa-link"></i></a>`;
         }
 
+        async function loadRemoteMembers() {
+            try {
+                const res = await fetch(MEMBERS_ENDPOINT, { method: "GET" });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok || !data.ok || !Array.isArray(data.members)) return;
+                const merged = new Map();
+                customMembers.forEach((member) => {
+                    if (member?.key) merged.set(member.key, member);
+                });
+                data.members.forEach((member) => {
+                    if (member?.key) merged.set(member.key, member);
+                });
+                customMembers = Array.from(merged.values());
+            } catch {
+                // Keep fallback members list.
+            }
+        }
+
         function buildDynamicMemberPage(member) {
             const key = member.key;
             const stats = (member.stats || ["Support"]).map((item) => `<span class="stat-item">${item}</span>`).join("");
@@ -2260,7 +2280,8 @@
                         roleTag: member.roleTag || "@Arata Support",
                         handle: `@${member.discordUsername || key}`,
                         img: "https://cdn.discordapp.com/embed/avatars/0.png",
-                        profile: member.profile || `https://discord.com/users/${member.discordId}`
+                        profile: member.profile || `https://discord.com/users/${member.discordId}`,
+                        hideFromCreators: Boolean(member.hideFromCreators)
                     });
                 }
                 if (player && !document.getElementById(`nav-${key}`)) {
@@ -2332,7 +2353,12 @@
         function renderCreators() {
             const grid = document.getElementById("creators-grid");
             if (!grid) return;
-            grid.innerHTML = creatorsData.map(c => `
+            const list = creatorsData.filter((c) => {
+                if (c.hideFromCreators) return false;
+                const roleTag = String(c.roleTag || "");
+                return roleTag.includes("Founder") || roleTag.includes("Manager") || c.showInCreators === true;
+            });
+            grid.innerHTML = list.map(c => `
                 <a class="creator-card" href="${c.profile}" target="_blank" rel="noopener">
                     <div class="creator-avatar-wrap">
                         <img class="creator-avatar" data-creator-key="${c.key}" src="${c.img}" alt="${c.name}" loading="lazy" decoding="async">
@@ -2445,18 +2471,21 @@
             `}).join('');
         }
         
-        registerCustomMembers();
-
-        Object.keys(database).forEach(key => {
-            render(`${key}-grid`, database[key].main);
-            render(`${key}-contribs`, database[key].contribs);
-        });
-        renderPartners();
-        renderFeatured();
-        renderCreators();
-        renderDuplicates();
-        applyDefaultVisuals();
-        updateFeaturedStats();
+        async function initializePageData() {
+            await loadRemoteMembers();
+            registerCustomMembers();
+            Object.keys(database).forEach(key => {
+                render(`${key}-grid`, database[key].main);
+                render(`${key}-contribs`, database[key].contribs);
+            });
+            renderPartners();
+            renderFeatured();
+            renderCreators();
+            renderDuplicates();
+            applyDefaultVisuals();
+            updateFeaturedStats();
+        }
+        initializePageData();
 
         function updateHomeStats() {
             const allProjects = new Map();
