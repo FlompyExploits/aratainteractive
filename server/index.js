@@ -27,6 +27,9 @@ const {
   CONTACT_CHANNEL_ID,
   CONTACT_WEBHOOK_URL,
   PARTNER_WEBHOOK_URL,
+  PARTNER_CHANNEL_ID,
+  PARTNER_BASE_ROLE_ID,
+  PARTNER_WELCOME_CHANNEL_ID,
   TEAM_SERVER_ID,
   DEV_ROLE_ID,
   ROLE_SCRIPTER_ID,
@@ -133,9 +136,12 @@ const logEnvDiagnostics = () => {
     ["DISCORD_BOT_TOKEN", Boolean(DISCORD_BOT_TOKEN), "Bot/login + channel mode"],
     ["APPLICATION_CHANNEL_ID", Boolean(APPLICATION_CHANNEL_ID), "Apply via bot channel"],
     ["DISCORD_WEBHOOK_URL", Boolean(DISCORD_WEBHOOK_URL), "Apply via webhook fallback"],
-    ["CONTACT_CHANNEL_ID", Boolean(CONTACT_CHANNEL_ID), "Contact via bot channel"],
+    ["CONTACT_CHANNEL_ID", Boolean(INQUIRY_CHANNEL_ID), "Contact via bot channel"],
     ["CONTACT_WEBHOOK_URL", Boolean(CONTACT_WEBHOOK_URL), "Contact via webhook fallback"],
     ["PARTNER_WEBHOOK_URL", Boolean(PARTNER_WEBHOOK_URL), "Partner via webhook"],
+    ["PARTNER_CHANNEL_ID", Boolean(PARTNER_REQUEST_CHANNEL_ID), "Partner via bot channel"],
+    ["PARTNER_BASE_ROLE_ID", Boolean(PARTNER_ROLE_ID), "Partner base role for accepted partners"],
+    ["PARTNER_WELCOME_CHANNEL_ID", Boolean(PARTNER_WELCOME_CH_ID), "Partner welcome ping channel"],
     ["S3 config", Boolean(S3_ENDPOINT && S3_BUCKET && S3_ACCESS_KEY && S3_SECRET_KEY), "Resume URL storage"]
   ];
   checks.forEach(([name, ok, note]) => {
@@ -192,6 +198,10 @@ const ROLE_LABEL_MAP = {
 };
 const OWNER_NOTIFY_USER_ID = "718594927998533662";
 const MAIN_SERVER_LINK = "https://discord.gg/JjPuB9Ue2q";
+const INQUIRY_CHANNEL_ID = CONTACT_CHANNEL_ID || "1468028979666751707";
+const PARTNER_REQUEST_CHANNEL_ID = PARTNER_CHANNEL_ID || "1471770824573714432";
+const PARTNER_ROLE_ID = PARTNER_BASE_ROLE_ID || "1471787925531267092";
+const PARTNER_WELCOME_CH_ID = PARTNER_WELCOME_CHANNEL_ID || "1471788287923454056";
 const commandLastUse = new Map();
 const commandCooldownMs = {
   ping: 3000,
@@ -302,6 +312,63 @@ const parseDiscordInviteCode = (value) => {
   } catch {
     return null;
   }
+};
+
+const toPartnerRoleName = (serverName) => {
+  const cleaned = String(serverName || "")
+    .replace(/[^\w !\-()[\].]/g, "")
+    .trim()
+    .replace(/\s+/g, " ");
+  if (!cleaned) return "Partner Server";
+  return cleaned.slice(0, 95);
+};
+
+const resolvePartnerTargetGuild = async () => {
+  if (!PARTNER_WELCOME_CH_ID) return null;
+  const welcomeChannel = await client.channels.fetch(PARTNER_WELCOME_CH_ID).catch(() => null);
+  if (!welcomeChannel?.guild) return null;
+  return welcomeChannel.guild;
+};
+
+const assignPartnerRoles = async (partnerData) => {
+  const guild = await resolvePartnerTargetGuild();
+  if (!guild) return { assigned: false, reason: "welcome_channel_not_found", roleName: toPartnerRoleName(partnerData.serverName) };
+
+  const roleName = toPartnerRoleName(partnerData.serverName);
+  const member = await guild.members.fetch(partnerData.requesterUserId).catch(() => null);
+  if (!member) return { assigned: false, reason: "member_not_in_main_server", roleName };
+
+  const basePartnerRole = PARTNER_ROLE_ID ? await guild.roles.fetch(PARTNER_ROLE_ID).catch(() => null) : null;
+  let serverRole = guild.roles.cache.find((r) => r.name.toLowerCase() === roleName.toLowerCase()) || null;
+  if (!serverRole) {
+    serverRole = await guild.roles.create({
+      name: roleName,
+      mentionable: false,
+      reason: `Partner accepted: ${partnerData.serverName}`
+    });
+    if (basePartnerRole) {
+      const targetPosition = Math.max(1, basePartnerRole.position - 1);
+      await serverRole.setPosition(targetPosition).catch(() => {});
+    }
+  }
+
+  const rolesToAdd = [];
+  if (basePartnerRole) rolesToAdd.push(basePartnerRole.id);
+  if (serverRole) rolesToAdd.push(serverRole.id);
+  if (rolesToAdd.length) {
+    await member.roles.add(rolesToAdd, "Partner request accepted");
+  }
+
+  const welcomeChannel = PARTNER_WELCOME_CH_ID
+    ? await guild.channels.fetch(PARTNER_WELCOME_CH_ID).catch(() => null)
+    : null;
+  if (welcomeChannel?.isTextBased?.()) {
+    await welcomeChannel.send(
+      `You have been roled Partner role and ${roleName} role! Welcome <@${partnerData.requesterUserId}>`
+    );
+  }
+
+  return { assigned: true, reason: null, roleName, guildId: guild.id };
 };
 
 const fetchInviteCounts = async (inviteCode) => {
@@ -590,8 +657,8 @@ app.post("/contact", formOnly.none(), async (req, res) => {
       ]
     };
 
-    if (client.isReady() && CONTACT_CHANNEL_ID) {
-      const channel = await client.channels.fetch(CONTACT_CHANNEL_ID);
+    if (client.isReady() && INQUIRY_CHANNEL_ID) {
+      const channel = await client.channels.fetch(INQUIRY_CHANNEL_ID);
       if (!channel || !channel.isTextBased?.()) {
         return res.status(500).json({ ok: false, error: "Contact channel invalid" });
       }
@@ -644,8 +711,11 @@ app.post("/contact", formOnly.none(), async (req, res) => {
 
 app.post("/partner-apply", formOnly.none(), async (req, res) => {
   try {
-    if (!PARTNER_WEBHOOK_URL) {
+    if (!PARTNER_REQUEST_CHANNEL_ID && !PARTNER_WEBHOOK_URL) {
       return res.status(500).json({ ok: false, error: "Partner destination not configured" });
+    }
+    if (!client.isReady() && !PARTNER_WEBHOOK_URL) {
+      return res.status(503).json({ ok: false, error: "Bot not ready, try again shortly" });
     }
 
     const {
@@ -702,25 +772,43 @@ app.post("/partner-apply", formOnly.none(), async (req, res) => {
       footer: { text: `Requester User ID: ${cleanUserId}` }
     };
 
-    const webhookResponse = await withTimeout(
-      axios.post(
-        PARTNER_WEBHOOK_URL.includes("?")
-          ? `${PARTNER_WEBHOOK_URL}&wait=true`
-          : `${PARTNER_WEBHOOK_URL}?wait=true`,
-        {
-          username: "Arata Partner",
+    let messageId = null;
+    if (client.isReady() && PARTNER_REQUEST_CHANNEL_ID) {
+      const channel = await client.channels.fetch(PARTNER_REQUEST_CHANNEL_ID);
+      if (!channel || !channel.isTextBased?.()) {
+        return res.status(500).json({ ok: false, error: "Partner channel invalid" });
+      }
+      const response = await withTimeout(
+        channel.send({
           content,
           embeds: [embed],
           allowed_mentions: { parse: roleMentions ? ["roles"] : [] }
-        },
-        { timeout: 10_000 }
-      ),
-      12_000,
-      "partner_webhook_timeout"
-    );
+        }),
+        12_000,
+        "partner_channel_send_timeout"
+      );
+      messageId = response?.id || null;
+    } else if (PARTNER_WEBHOOK_URL) {
+      const webhookResponse = await withTimeout(
+        axios.post(
+          PARTNER_WEBHOOK_URL.includes("?")
+            ? `${PARTNER_WEBHOOK_URL}&wait=true`
+            : `${PARTNER_WEBHOOK_URL}?wait=true`,
+          {
+            username: "Arata Partner",
+            content,
+            embeds: [embed],
+            allowed_mentions: { parse: roleMentions ? ["roles"] : [] }
+          },
+          { timeout: 10_000 }
+        ),
+        12_000,
+        "partner_webhook_timeout"
+      );
+      messageId = webhookResponse?.data?.id || null;
+    }
 
-    const messageId = webhookResponse?.data?.id || null;
-    if (!messageId) return res.status(500).json({ ok: false, error: "Partner webhook did not return message id" });
+    if (!messageId) return res.status(500).json({ ok: false, error: "Partner destination did not return message id" });
     const partners = loadPartners();
     partners[messageId] = {
       requestId: generatedId,
@@ -810,6 +898,28 @@ const client = new Client({
 client.on("clientReady", () => {
   console.log(`Bot online as ${client.user.tag}`);
   refreshInvitesCache();
+  (async () => {
+    try {
+      const guild = await resolvePartnerTargetGuild();
+      if (!guild) return;
+      const partners = loadPartners();
+      let changed = false;
+      for (const [msgId, entry] of Object.entries(partners)) {
+        if (!(entry?.status === "accepted" && entry?.pendingRoleAssignment && entry?.requesterUserId)) continue;
+        const roleResult = await assignPartnerRoles(entry).catch(() => ({ assigned: false }));
+        if (roleResult.assigned) {
+          partners[msgId].pendingRoleAssignment = false;
+          partners[msgId].pendingRoleReason = null;
+          partners[msgId].roleName = roleResult.roleName || partners[msgId].roleName || null;
+          changed = true;
+        }
+      }
+      if (changed) savePartners(partners);
+    } catch (e) {
+      console.error("Partner pending-role sync failed:", e?.message || e);
+    }
+  })();
+
   if (APPLICATION_CHANNEL_ID) {
     client.channels.fetch(APPLICATION_CHANNEL_ID)
       .then((ch) => {
@@ -938,14 +1048,17 @@ client.on("clientReady", () => {
 client.on("messageReactionAdd", async (reaction, user) => {
   try {
     if (user.bot) return;
-    if (!reaction.message.guildId || reaction.message.guildId !== GUILD_ID) return;
+    if (!reaction.message.guildId) return;
 
     const emoji = reaction.emoji.name;
     const isAccept = emoji === "\u2705";
     const isReject = emoji === "\u274C";
     if (!isAccept && !isReject) return;
     const member = await reaction.message.guild.members.fetch(user.id);
-    const hasRole = member.roles.cache.has(FOUNDERS_ROLE_ID) || member.roles.cache.has(MANAGERS_ROLE_ID);
+    const hasRole =
+      member.roles.cache.has(FOUNDERS_ROLE_ID) ||
+      member.roles.cache.has(MANAGERS_ROLE_ID) ||
+      member.permissions.has("ManageGuild");
     if (!hasRole) return;
 
     const apps = loadApplications();
@@ -959,7 +1072,15 @@ client.on("messageReactionAdd", async (reaction, user) => {
       partnerData.status = "accepted";
       partnerData.acceptedBy = user.id;
       partnerData.acceptedByTag = user.tag || user.username || "unknown";
+      const roleResult = await assignPartnerRoles(partnerData).catch((roleErr) => {
+        console.error("Partner role assignment failed:", roleErr?.message || roleErr);
+        return { assigned: false, reason: "role_assign_exception", roleName: toPartnerRoleName(partnerData.serverName) };
+      });
+      partnerData.roleName = roleResult.roleName;
+      partnerData.pendingRoleAssignment = !roleResult.assigned;
+      partnerData.pendingRoleReason = roleResult.reason || null;
       savePartners(partners);
+
       try {
         const requester = await client.users.fetch(partnerData.requesterUserId);
         await requester.send(
@@ -973,7 +1094,9 @@ client.on("messageReactionAdd", async (reaction, user) => {
         const ownerUser = await client.users.fetch(OWNER_NOTIFY_USER_ID);
         await ownerUser.send(
           `The Partner request of ${partnerData.requesterUsername} by server: ${partnerData.serverName} has been accepted by: ${partnerData.acceptedByTag}\n` +
-          `ID: ${partnerData.requestId}`
+          `ID: ${partnerData.requestId}\n` +
+          `Role: Partner${partnerData.roleName ? ` + ${partnerData.roleName}` : ""}\n` +
+          `User in server: ${roleResult.assigned ? "Yes" : "No"}`
         );
       } catch (e) {
         console.error("Partner owner DM failed:", e?.message || e);
@@ -1037,6 +1160,31 @@ client.on("messageReactionAdd", async (reaction, user) => {
 
 client.on("guildMemberAdd", async (member) => {
   try {
+    const partnerGuild = await resolvePartnerTargetGuild();
+    if (partnerGuild && member.guild.id === partnerGuild.id) {
+      const partners = loadPartners();
+      const pendingPartnerEntry = Object.values(partners).find(
+        (p) => p.requesterUserId === member.user.id && p.status === "accepted" && p.pendingRoleAssignment
+      );
+      if (pendingPartnerEntry) {
+        const roleResult = await assignPartnerRoles(pendingPartnerEntry).catch((e) => {
+          console.error("Pending partner role assignment failed:", e?.message || e);
+          return { assigned: false, reason: "role_assign_exception" };
+        });
+        if (roleResult.assigned) {
+          for (const [msgId, value] of Object.entries(partners)) {
+            if (value.requestId === pendingPartnerEntry.requestId) {
+              partners[msgId].pendingRoleAssignment = false;
+              partners[msgId].pendingRoleReason = null;
+              partners[msgId].roleName = roleResult.roleName || partners[msgId].roleName || null;
+              break;
+            }
+          }
+          savePartners(partners);
+        }
+      }
+    }
+
     if (member.guild.id !== TEAM_GUILD_ID) return;
 
     const apps = loadApplications();
