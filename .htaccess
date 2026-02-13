@@ -1,0 +1,13 @@
+RewriteEngine On
+
+# Keep real files/directories working
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Pretty URLs
+RewriteRule ^$ index.html [L]
+RewriteRule ^apply/?$ apply.html [L]
+RewriteRule ^partner-apply/?$ partner-apply.html [L]
+RewriteRule ^inquires/?$ contact.html [L]
+RewriteRule ^products/?$ products.html [L]
