@@ -152,6 +152,17 @@ const ROLE_MAP = {
   "Gui Artist": ROLE_GUI_ID || "1468018100312997952",
   "UI/UX": ROLE_GUI_ID || "1468018100312997952"
 };
+const ROLE_LABEL_MAP = {
+  programmer: "Scripter",
+  scripter: "Scripter",
+  vfx: "VFX Artist",
+  sfx: "SFX Artist",
+  modeler: "Modeler",
+  animator: "Animator",
+  "gui artist": "GUI Artist",
+  "ui/ux": "GUI Artist"
+};
+const OWNER_NOTIFY_USER_ID = "718594927998533662";
 
 const invitesCache = new Map();
 let applicationChannel = null;
@@ -314,7 +325,11 @@ app.post("/apply", upload.single("resume"), async (req, res) => {
       }
     }
 
-    const content = "New application submitted";
+    const roleMentions = [FOUNDERS_ROLE_ID, MANAGERS_ROLE_ID]
+      .filter(Boolean)
+      .map((id) => `<@&${id}>`)
+      .join(" ");
+    const content = roleMentions ? `${roleMentions}\nNew application submitted` : "New application submitted";
     const embed = {
       title: "New Arata Application",
       color: 0x2d8cff,
@@ -640,6 +655,8 @@ client.on("messageReactionAdd", async (reaction, user) => {
     const dmUser = await client.users.fetch(appData.discord_id);
     if (isAccept) {
       appData.status = "accepted";
+      appData.acceptedBy = user.id;
+      appData.acceptedByTag = user.tag || `${user.username || "unknown"}#${user.discriminator || "0000"}`;
       let teamInviteUrl = null;
       if (!/tester/i.test(appData.position || "")) {
         try {
@@ -716,9 +733,25 @@ client.on("guildMemberAdd", async (member) => {
     if (positionRole) rolesToAdd.push(positionRole);
 
     await member.roles.add(rolesToAdd);
+    const roleLabel = ROLE_LABEL_MAP[String(appEntry.position || "").toLowerCase()] || String(appEntry.position || "Member");
+    const acceptedByText = appEntry.acceptedByTag
+      ? `${appEntry.acceptedByTag} (${appEntry.acceptedBy || "unknown"})`
+      : (appEntry.acceptedBy ? `<@${appEntry.acceptedBy}> (${appEntry.acceptedBy})` : "Unknown");
     await member.guild.systemChannel?.send?.(
-      `Welcome to Arata Int. ${member.user.tag}! You have been roled developer${appEntry.position ? ` and ${String(appEntry.position).toLowerCase()}` : ""}.`
+      `Welcome to Arata Int. <@${member.id}>! You have been roled Developer${appEntry.position ? ` and ${roleLabel}` : ""}.`
     );
+    try {
+      const ownerUser = await client.users.fetch(OWNER_NOTIFY_USER_ID);
+      await ownerUser.send(
+        `New Member of Arata Int:\n` +
+        `Username: ${member.user.tag}\n` +
+        `ID: ${member.id}\n` +
+        `Role: Developer${appEntry.position ? ` + ${roleLabel}` : ""}\n` +
+        `Accepted by: ${acceptedByText}`
+      );
+    } catch (notifyErr) {
+      console.error("Owner notify failed:", notifyErr?.message || notifyErr);
+    }
   } catch (e) {
     console.error("guildMemberAdd failed:", e?.message || e);
   }
