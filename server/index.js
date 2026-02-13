@@ -219,8 +219,60 @@ const extractDiscordIdFromMessage = (msg) => {
   return contentMatch ? contentMatch[0] : null;
 };
 
+const withTimeout = (promise, ms, code) => new Promise((resolve, reject) => {
+  const timer = setTimeout(() => {
+    const err = new Error(code || "operation_timeout");
+    err.code = code || "operation_timeout";
+    reject(err);
+  }, ms);
+  promise
+    .then((val) => {
+      clearTimeout(timer);
+      resolve(val);
+    })
+    .catch((err) => {
+      clearTimeout(timer);
+      reject(err);
+    });
+});
+
+const resolveApplicationByMessageId = async (msgId, guild, knownChannel = null) => {
+  const apps = loadApplications();
+  if (apps[msgId]) return { appData: apps[msgId], source: "applications.json" };
+  const candidateChannels = [];
+  if (knownChannel && knownChannel.isTextBased?.()) {
+    candidateChannels.push(knownChannel);
+  }
+  for (const ch of guild.channels.cache.values()) {
+    if (!ch?.isTextBased?.()) continue;
+    if (candidateChannels.find((c) => c.id === ch.id)) continue;
+    candidateChannels.push(ch);
+    if (candidateChannels.length >= 40) break;
+  }
+  for (const sourceChannel of candidateChannels) {
+    try {
+      const sourceMsg = await sourceChannel.messages.fetch(msgId);
+      const inferredDiscordId = extractDiscordIdFromMessage(sourceMsg);
+      if (inferredDiscordId) {
+        return {
+          appData: {
+            discord_id: inferredDiscordId,
+            discord_username: "Unknown",
+            email: "Unknown"
+          },
+          source: `channel:${sourceChannel.id}`
+        };
+      }
+    } catch {
+      // continue
+    }
+  }
+  return null;
+};
+
 app.post("/apply", upload.single("resume"), async (req, res) => {
   try {
+    const startedAt = Date.now();
     if (!APPLICATION_CHANNEL_ID && !DISCORD_WEBHOOK_URL) {
       return res.status(500).json({ ok: false, error: "Application destination not configured" });
     }
@@ -253,7 +305,9 @@ app.post("/apply", upload.single("resume"), async (req, res) => {
     let resumeUrl = null;
     if (s3Client) {
       try {
-        resumeUrl = await uploadResume(req.file, name);
+        console.log("Apply resume upload start");
+        resumeUrl = await withTimeout(uploadResume(req.file, name), 15_000, "resume_upload_timeout");
+        console.log("Apply resume upload ok");
       } catch (uploadErr) {
         console.error("Resume upload failed:", uploadErr?.name, uploadErr?.message || uploadErr);
         return res.status(500).json({ ok: false, error: "Resume upload failed (check S3 settings)" });
@@ -288,16 +342,22 @@ app.post("/apply", upload.single("resume"), async (req, res) => {
         embeds: [embed],
         allowed_mentions: { parse: ["roles"] }
       };
-      const webhookResponse = await axios.post(
-        DISCORD_WEBHOOK_URL.includes("?")
-          ? `${DISCORD_WEBHOOK_URL}&wait=true`
-          : `${DISCORD_WEBHOOK_URL}?wait=true`,
-        webhookPayload,
-        { timeout: 10_000 }
+      console.log("Apply discord webhook send start");
+      const webhookResponse = await withTimeout(
+        axios.post(
+          DISCORD_WEBHOOK_URL.includes("?")
+            ? `${DISCORD_WEBHOOK_URL}&wait=true`
+            : `${DISCORD_WEBHOOK_URL}?wait=true`,
+          webhookPayload,
+          { timeout: 10_000 }
+        ),
+        12_000,
+        "discord_webhook_timeout"
       );
       msgId = webhookResponse?.data?.id || null;
     } else {
       if (!applicationChannel) {
+        console.log("Apply fetch application channel start");
         const channel = await client.channels.fetch(APPLICATION_CHANNEL_ID);
         if (!channel || !channel.isTextBased?.()) {
           return res.status(500).json({ ok: false, error: "Application channel invalid" });
@@ -305,15 +365,23 @@ app.post("/apply", upload.single("resume"), async (req, res) => {
         applicationChannel = channel;
       }
 
-      const response = await applicationChannel.send({
-        content,
-        embeds: [embed],
-        files: resumeUrl ? [] : [{
-          attachment: req.file.buffer,
-          name: req.file.originalname
-        }]
-      });
+      console.log("Apply discord channel send start");
+      const response = await withTimeout(
+        applicationChannel.send({
+          content,
+          embeds: [embed],
+          files: resumeUrl ? [] : [{
+            attachment: req.file.buffer,
+            name: req.file.originalname
+          }]
+        }),
+        12_000,
+        "discord_channel_send_timeout"
+      );
       msgId = response?.id || null;
+    }
+    if (!msgId) {
+      return res.status(500).json({ ok: false, error: "Discord did not return a message id" });
     }
     if (msgId) {
       const apps = loadApplications();
@@ -329,7 +397,7 @@ app.post("/apply", upload.single("resume"), async (req, res) => {
       saveApplications(apps);
     }
 
-    console.log("Apply success:", { messageId: msgId, hasS3Resume: Boolean(resumeUrl) });
+    console.log("Apply success:", { messageId: msgId, hasS3Resume: Boolean(resumeUrl), ms: Date.now() - startedAt });
     res.json({ ok: true });
   } catch (err) {
     console.error("Apply failed:", err?.response?.status, err?.response?.data || err?.message || err);
@@ -353,7 +421,8 @@ app.post("/apply", upload.single("resume"), async (req, res) => {
     if (
       String(err?.code || "").includes("ECONN") ||
       String(err?.code || "").includes("ETIMEDOUT") ||
-      String(err?.name || "").includes("Timeout")
+      String(err?.name || "").includes("Timeout") ||
+      String(err?.code || "").includes("timeout")
     ) {
       return res.status(503).json({ ok: false, error: "Network timeout talking to Discord/S3" });
     }
@@ -455,11 +524,31 @@ client.on("clientReady", () => {
           required: true
         }
       ]
+    },
+    {
+      name: "ping",
+      description: "Check if the bot is responsive"
+    },
+    {
+      name: "botstatus",
+      description: "Show bot/application integration status"
+    },
+    {
+      name: "appstatus",
+      description: "Lookup application/inquiry by message ID (staff only)",
+      options: [
+        {
+          type: 3,
+          name: "message_id",
+          description: "Message ID from applications/inquiries channel",
+          required: true
+        }
+      ]
     }
   ];
 
   rest.put(Routes.applicationGuildCommands(DISCORD_CLIENT_ID, GUILD_ID), { body: commands })
-    .then(() => console.log("Slash command /reply registered"))
+    .then(() => console.log("Slash commands registered: /reply /ping /botstatus /appstatus"))
     .catch((e) => console.error("Slash command register failed:", e?.message || e));
 });
 
@@ -570,7 +659,25 @@ client.on("guildMemberAdd", async (member) => {
 client.on("interactionCreate", async (interaction) => {
   try {
     if (!interaction.isChatInputCommand()) return;
-    if (interaction.commandName !== "reply") return;
+    if (!["reply", "ping", "botstatus", "appstatus"].includes(interaction.commandName)) return;
+
+    if (interaction.commandName === "ping") {
+      const latency = Date.now() - interaction.createdTimestamp;
+      return interaction.reply({ flags: 64, content: `pong (${latency}ms)` });
+    }
+
+    if (interaction.commandName === "botstatus") {
+      const mode = DISCORD_WEBHOOK_URL ? "webhook+bot" : "bot-only";
+      return interaction.reply({
+        flags: 64,
+        content:
+          `Bot ready: ${client.isReady()}\n` +
+          `Apply mode: ${mode}\n` +
+          `Application channel set: ${Boolean(APPLICATION_CHANNEL_ID)}\n` +
+          `Uptime: ${Math.floor(process.uptime())}s`
+      });
+    }
+
     if (!interaction.guild || interaction.guild.id !== GUILD_ID) return;
 
     await interaction.deferReply({ flags: 64 });
@@ -588,49 +695,20 @@ client.on("interactionCreate", async (interaction) => {
     }
 
     const msgId = interaction.options.getString("message_id", true);
-    const replyText = interaction.options.getString("message", true);
+    const resolved = await resolveApplicationByMessageId(msgId, interaction.guild, applicationChannel);
+    if (!resolved?.appData) return interaction.editReply("Message ID not found in applications/inquiries.");
+    const appData = resolved.appData;
 
-    const apps = loadApplications();
-    let appData = apps[msgId] || null;
-    if (!appData) {
-      try {
-        if (!applicationChannel && APPLICATION_CHANNEL_ID) {
-          const ch = await client.channels.fetch(APPLICATION_CHANNEL_ID);
-          if (ch && ch.isTextBased?.()) applicationChannel = ch;
-        }
-        const candidateChannels = [];
-        if (applicationChannel && applicationChannel.isTextBased?.()) {
-          candidateChannels.push(applicationChannel);
-        }
-        for (const ch of interaction.guild.channels.cache.values()) {
-          if (!ch?.isTextBased?.()) continue;
-          if (candidateChannels.find((c) => c.id === ch.id)) continue;
-          candidateChannels.push(ch);
-          if (candidateChannels.length >= 40) break;
-        }
-        for (const sourceChannel of candidateChannels) {
-          try {
-            const sourceMsg = await sourceChannel.messages.fetch(msgId);
-            const inferredDiscordId = extractDiscordIdFromMessage(sourceMsg);
-            if (inferredDiscordId) {
-              appData = {
-                discord_id: inferredDiscordId,
-                discord_username: "Unknown",
-                email: "Unknown"
-              };
-              break;
-            }
-          } catch {
-            // Try next channel.
-          }
-        }
-      } catch (_e) {
-        // Continue to not-found message below.
-      }
+    if (interaction.commandName === "appstatus") {
+      return interaction.editReply(
+        `Found message ID ${msgId}\n` +
+        `Source: ${resolved.source}\n` +
+        `Discord ID: ${appData.discord_id}\n` +
+        `Status: ${appData.status || "unknown"}`
+      );
     }
-    if (!appData) {
-      return interaction.editReply("Message ID not found in applications/inquiries.");
-    }
+
+    const replyText = interaction.options.getString("message", true);
 
     const dmUser = await client.users.fetch(appData.discord_id);
     const replyBody =
