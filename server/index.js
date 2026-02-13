@@ -24,6 +24,9 @@ const {
   MANAGERS_ROLE_ID,
   GUILD_ID,
   APPLICATION_CHANNEL_ID,
+  CONTACT_CHANNEL_ID,
+  CONTACT_WEBHOOK_URL,
+  PARTNER_WEBHOOK_URL,
   TEAM_SERVER_ID,
   DEV_ROLE_ID,
   ROLE_SCRIPTER_ID,
@@ -77,7 +80,7 @@ const corsOptions = {
     return cb(null, true);
   },
   methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
+  allowedHeaders: ["Content-Type", "Authorization", "X-Admin-Key"]
 };
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
@@ -106,15 +109,40 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 7 * 1024 * 1024 }
 });
+const formOnly = multer();
 
 const dataDir = path.join(__dirname, "data");
 const appsFile = path.join(dataDir, "applications.json");
+const partnerFile = path.join(dataDir, "partners.json");
+const runtimeState = {
+  apply: { lastSuccessAt: null, lastErrorAt: null, lastError: null },
+  contact: { lastSuccessAt: null, lastErrorAt: null, lastError: null }
+};
 
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 if (!fs.existsSync(appsFile)) fs.writeFileSync(appsFile, JSON.stringify({}));
+if (!fs.existsSync(partnerFile)) fs.writeFileSync(partnerFile, JSON.stringify({}));
 
 const loadApplications = () => JSON.parse(fs.readFileSync(appsFile, "utf-8") || "{}");
 const saveApplications = (data) => fs.writeFileSync(appsFile, JSON.stringify(data, null, 2));
+const loadPartners = () => JSON.parse(fs.readFileSync(partnerFile, "utf-8") || "{}");
+const savePartners = (data) => fs.writeFileSync(partnerFile, JSON.stringify(data, null, 2));
+
+const logEnvDiagnostics = () => {
+  const checks = [
+    ["DISCORD_BOT_TOKEN", Boolean(DISCORD_BOT_TOKEN), "Bot/login + channel mode"],
+    ["APPLICATION_CHANNEL_ID", Boolean(APPLICATION_CHANNEL_ID), "Apply via bot channel"],
+    ["DISCORD_WEBHOOK_URL", Boolean(DISCORD_WEBHOOK_URL), "Apply via webhook fallback"],
+    ["CONTACT_CHANNEL_ID", Boolean(CONTACT_CHANNEL_ID), "Contact via bot channel"],
+    ["CONTACT_WEBHOOK_URL", Boolean(CONTACT_WEBHOOK_URL), "Contact via webhook fallback"],
+    ["PARTNER_WEBHOOK_URL", Boolean(PARTNER_WEBHOOK_URL), "Partner via webhook"],
+    ["S3 config", Boolean(S3_ENDPOINT && S3_BUCKET && S3_ACCESS_KEY && S3_SECRET_KEY), "Resume URL storage"]
+  ];
+  checks.forEach(([name, ok, note]) => {
+    const level = ok ? "OK" : "WARN";
+    console.log(`[env:${level}] ${name} - ${note}`);
+  });
+};
 
 const badWords = [
   "fuck", "shit", "bitch", "nigger", "faggot", "cunt", "retard", "whore", "slut"
@@ -163,6 +191,18 @@ const ROLE_LABEL_MAP = {
   "ui/ux": "GUI Artist"
 };
 const OWNER_NOTIFY_USER_ID = "718594927998533662";
+const MAIN_SERVER_LINK = "https://discord.gg/JjPuB9Ue2q";
+const commandLastUse = new Map();
+const commandCooldownMs = {
+  ping: 3000,
+  botstatus: 5000,
+  appstatus: 5000,
+  reply: 8000,
+  dmuser: 12000,
+  setappstatus: 6000,
+  resendinvite: 12000,
+  lookupdiscord: 6000
+};
 
 const invitesCache = new Map();
 let applicationChannel = null;
@@ -246,6 +286,38 @@ const withTimeout = (promise, ms, code) => new Promise((resolve, reject) => {
       reject(err);
     });
 });
+
+const parseDiscordInviteCode = (value) => {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+  try {
+    if (/^https?:\/\//i.test(raw)) {
+      const u = new URL(raw);
+      const parts = u.pathname.split("/").filter(Boolean);
+      if (u.hostname.includes("discord.gg") && parts[0]) return parts[0];
+      if (u.hostname.includes("discord.com") && parts[0] === "invite" && parts[1]) return parts[1];
+      return null;
+    }
+    return raw.replace(/^invite\//i, "");
+  } catch {
+    return null;
+  }
+};
+
+const fetchInviteCounts = async (inviteCode) => {
+  if (!inviteCode) return null;
+  try {
+    const res = await axios.get(`https://discord.com/api/v10/invites/${inviteCode}?with_counts=true`, {
+      timeout: 8000
+    });
+    return {
+      memberCount: res.data?.approximate_member_count ?? null,
+      onlineCount: res.data?.approximate_presence_count ?? null
+    };
+  } catch {
+    return null;
+  }
+};
 
 const resolveApplicationByMessageId = async (msgId, guild, knownChannel = null) => {
   const apps = loadApplications();
@@ -425,9 +497,14 @@ app.post("/apply", upload.single("resume"), async (req, res) => {
     }
 
     console.log("Apply success:", { messageId: msgId, hasS3Resume: Boolean(resumeUrl), ms: Date.now() - startedAt });
+    runtimeState.apply.lastSuccessAt = new Date().toISOString();
+    runtimeState.apply.lastErrorAt = null;
+    runtimeState.apply.lastError = null;
     res.json({ ok: true });
   } catch (err) {
     console.error("Apply failed:", err?.response?.status, err?.response?.data || err?.message || err);
+    runtimeState.apply.lastErrorAt = new Date().toISOString();
+    runtimeState.apply.lastError = String(err?.response?.data?.message || err?.message || err?.code || "unknown_apply_error");
     const status = err?.response?.status;
     if (status === 429 || status === 1015) {
       return res.status(503).json({ ok: false, error: "Discord rate limit, try again shortly" });
@@ -462,6 +539,209 @@ app.get("/apply", (_req, res) => {
     ok: false,
     error: "Use POST /apply with multipart/form-data"
   });
+});
+
+app.post("/contact", formOnly.none(), async (req, res) => {
+  try {
+    const {
+      name = "",
+      email = "",
+      discord_id = "",
+      topic = "",
+      message = "",
+      inquiry_type = "General Inquiry"
+    } = req.body || {};
+
+    const cleanName = String(name).trim();
+    const cleanEmail = String(email).trim();
+    const cleanDiscordId = String(discord_id).trim();
+    const cleanTopic = String(topic).trim();
+    const cleanMessage = String(message).trim();
+    const cleanInquiryType = String(inquiry_type).trim() || "General Inquiry";
+
+    if (!cleanName || !cleanEmail || !cleanTopic || !cleanMessage) {
+      return res.status(400).json({ ok: false, error: "Missing required fields" });
+    }
+    if (!isValidEmail(cleanEmail)) {
+      return res.status(400).json({ ok: false, error: "Invalid email" });
+    }
+    if (cleanDiscordId && !/^\d{17,20}$/.test(cleanDiscordId)) {
+      return res.status(400).json({ ok: false, error: "Invalid Discord ID" });
+    }
+    if (containsBadWords(`${cleanName} ${cleanTopic} ${cleanMessage}`)) {
+      return res.status(400).json({ ok: false, error: "Message contains prohibited language" });
+    }
+
+    const roleMentions = [FOUNDERS_ROLE_ID, MANAGERS_ROLE_ID]
+      .filter(Boolean)
+      .map((id) => `<@&${id}>`)
+      .join(" ");
+    const content = roleMentions ? `${roleMentions}\nNew inquiry submitted` : "New inquiry submitted";
+    const embed = {
+      title: "New Inquiry",
+      color: 0x58b2ff,
+      fields: [
+        { name: "Name", value: cleanName, inline: true },
+        { name: "Email", value: cleanEmail, inline: true },
+        { name: "Inquiry Type", value: cleanInquiryType, inline: true },
+        { name: "Topic", value: cleanTopic, inline: true },
+        { name: "Discord ID", value: cleanDiscordId || "N/A", inline: true },
+        { name: "Message", value: `\`\`\`\n${cleanMessage}\n\`\`\`` }
+      ]
+    };
+
+    if (client.isReady() && CONTACT_CHANNEL_ID) {
+      const channel = await client.channels.fetch(CONTACT_CHANNEL_ID);
+      if (!channel || !channel.isTextBased?.()) {
+        return res.status(500).json({ ok: false, error: "Contact channel invalid" });
+      }
+      const response = await withTimeout(
+        channel.send({
+          content,
+          embeds: [embed]
+        }),
+        12_000,
+        "discord_contact_send_timeout"
+      );
+      runtimeState.contact.lastSuccessAt = new Date().toISOString();
+      runtimeState.contact.lastErrorAt = null;
+      runtimeState.contact.lastError = null;
+      return res.json({ ok: true, messageId: response?.id || null });
+    }
+
+    if (CONTACT_WEBHOOK_URL) {
+      const webhookPayload = {
+        username: "Arata Contact",
+        content,
+        embeds: [embed],
+        allowed_mentions: { parse: roleMentions ? ["roles"] : [] }
+      };
+      await withTimeout(
+        axios.post(
+          CONTACT_WEBHOOK_URL.includes("?")
+            ? `${CONTACT_WEBHOOK_URL}&wait=true`
+            : `${CONTACT_WEBHOOK_URL}?wait=true`,
+          webhookPayload,
+          { timeout: 10_000 }
+        ),
+        12_000,
+        "contact_webhook_timeout"
+      );
+      runtimeState.contact.lastSuccessAt = new Date().toISOString();
+      runtimeState.contact.lastErrorAt = null;
+      runtimeState.contact.lastError = null;
+      return res.json({ ok: true });
+    }
+
+    return res.status(500).json({ ok: false, error: "Contact destination not configured" });
+  } catch (err) {
+    console.error("Contact failed:", err?.response?.status, err?.response?.data || err?.message || err);
+    runtimeState.contact.lastErrorAt = new Date().toISOString();
+    runtimeState.contact.lastError = String(err?.response?.data?.message || err?.message || err?.code || "unknown_contact_error");
+    return res.status(500).json({ ok: false, error: "Failed to send message" });
+  }
+});
+
+app.post("/partner-apply", formOnly.none(), async (req, res) => {
+  try {
+    if (!PARTNER_WEBHOOK_URL) {
+      return res.status(500).json({ ok: false, error: "Partner destination not configured" });
+    }
+
+    const {
+      server_link = "",
+      username = "",
+      user_id = "",
+      reason = "",
+      server_name = "",
+      member_count = "",
+      activity = ""
+    } = req.body || {};
+
+    const cleanServerLink = String(server_link).trim();
+    const cleanUsername = String(username).trim();
+    const cleanUserId = String(user_id).trim();
+    const cleanReason = String(reason).trim();
+    const cleanServerName = String(server_name).trim();
+    const cleanMemberCount = String(member_count).trim();
+    const cleanActivity = String(activity).trim();
+
+    if (!cleanServerLink || !cleanUsername || !cleanUserId || !cleanReason || !cleanServerName) {
+      return res.status(400).json({ ok: false, error: "Missing required fields" });
+    }
+    if (!/^\d{17,20}$/.test(cleanUserId)) {
+      return res.status(400).json({ ok: false, error: "Invalid user ID (must be 17-20 digits)" });
+    }
+    if (containsBadWords(`${cleanUsername} ${cleanReason} ${cleanServerName}`)) {
+      return res.status(400).json({ ok: false, error: "Inappropriate content detected" });
+    }
+
+    const inviteCode = parseDiscordInviteCode(cleanServerLink);
+    const inviteCounts = await fetchInviteCounts(inviteCode);
+    const generatedId = `PR-${Date.now().toString(36)}-${Math.floor(Math.random() * 9000 + 1000)}`;
+    const roleMentions = [FOUNDERS_ROLE_ID, MANAGERS_ROLE_ID]
+      .filter(Boolean)
+      .map((id) => `<@&${id}>`)
+      .join(" ");
+    const content = roleMentions ? `${roleMentions}\nNew partner request` : "New partner request";
+    const embed = {
+      title: "Partner Application",
+      color: 0x7aa2ff,
+      fields: [
+        { name: "Server Name", value: cleanServerName, inline: true },
+        { name: "Requester", value: cleanUsername, inline: true },
+        { name: "Requester ID", value: cleanUserId, inline: true },
+        { name: "Server Link", value: cleanServerLink, inline: false },
+        { name: "Why Partner", value: `\`\`\`\n${cleanReason}\n\`\`\``, inline: false },
+        { name: "Member Count (provided)", value: cleanMemberCount || "N/A", inline: true },
+        { name: "Activity (provided)", value: cleanActivity || "N/A", inline: true },
+        { name: "Member Count (detected)", value: String(inviteCounts?.memberCount ?? "N/A"), inline: true },
+        { name: "Activity (detected online)", value: String(inviteCounts?.onlineCount ?? "N/A"), inline: true },
+        { name: "Partner Request ID", value: generatedId, inline: false }
+      ],
+      footer: { text: `Requester User ID: ${cleanUserId}` }
+    };
+
+    const webhookResponse = await withTimeout(
+      axios.post(
+        PARTNER_WEBHOOK_URL.includes("?")
+          ? `${PARTNER_WEBHOOK_URL}&wait=true`
+          : `${PARTNER_WEBHOOK_URL}?wait=true`,
+        {
+          username: "Arata Partner",
+          content,
+          embeds: [embed],
+          allowed_mentions: { parse: roleMentions ? ["roles"] : [] }
+        },
+        { timeout: 10_000 }
+      ),
+      12_000,
+      "partner_webhook_timeout"
+    );
+
+    const messageId = webhookResponse?.data?.id || null;
+    if (!messageId) return res.status(500).json({ ok: false, error: "Partner webhook did not return message id" });
+    const partners = loadPartners();
+    partners[messageId] = {
+      requestId: generatedId,
+      requesterUsername: cleanUsername,
+      requesterUserId: cleanUserId,
+      serverName: cleanServerName,
+      serverLink: cleanServerLink,
+      reason: cleanReason,
+      memberCountProvided: cleanMemberCount || null,
+      activityProvided: cleanActivity || null,
+      memberCountDetected: inviteCounts?.memberCount ?? null,
+      activityDetected: inviteCounts?.onlineCount ?? null,
+      status: "pending",
+      acceptedBy: null
+    };
+    savePartners(partners);
+    return res.json({ ok: true, messageId, partnerRequestId: generatedId });
+  } catch (err) {
+    console.error("Partner apply failed:", err?.response?.status, err?.response?.data || err?.message || err);
+    return res.status(500).json({ ok: false, error: "Failed to submit partner request" });
+  }
 });
 
 app.get("/stripe-config", (_req, res) => {
@@ -501,8 +781,19 @@ app.get("/health", (_req, res) => {
   });
 });
 
+app.get("/ops", (_req, res) => {
+  res.json({
+    ok: true,
+    botReady: client.isReady(),
+    uptimeSec: Math.floor(process.uptime()),
+    apply: runtimeState.apply,
+    contact: runtimeState.contact
+  });
+});
+
 app.listen(PORT, () => {
   console.log(`Application server running on ${PORT}`);
+  logEnvDiagnostics();
 });
 
 const client = new Client({
@@ -659,7 +950,36 @@ client.on("messageReactionAdd", async (reaction, user) => {
 
     const apps = loadApplications();
     const appData = apps[reaction.message.id];
-    if (!appData) return;
+    const partners = loadPartners();
+    const partnerData = partners[reaction.message.id];
+    if (!appData && !partnerData) return;
+
+    if (partnerData) {
+      if (!isAccept) return;
+      partnerData.status = "accepted";
+      partnerData.acceptedBy = user.id;
+      partnerData.acceptedByTag = user.tag || user.username || "unknown";
+      savePartners(partners);
+      try {
+        const requester = await client.users.fetch(partnerData.requesterUserId);
+        await requester.send(
+          `We at Arata Interactive are very happy to partner with your server ${partnerData.serverName}!\n` +
+          `Main Server: ${MAIN_SERVER_LINK}`
+        );
+      } catch (e) {
+        console.error("Partner requester DM failed:", e?.message || e);
+      }
+      try {
+        const ownerUser = await client.users.fetch(OWNER_NOTIFY_USER_ID);
+        await ownerUser.send(
+          `The Partner request of ${partnerData.requesterUsername} by server: ${partnerData.serverName} has been accepted by: ${partnerData.acceptedByTag}\n` +
+          `ID: ${partnerData.requestId}`
+        );
+      } catch (e) {
+        console.error("Partner owner DM failed:", e?.message || e);
+      }
+      return;
+    }
 
     const dmUser = await client.users.fetch(appData.discord_id);
     if (isAccept) {
@@ -770,6 +1090,18 @@ client.on("interactionCreate", async (interaction) => {
   try {
     if (!interaction.isChatInputCommand()) return;
     if (!["reply", "ping", "botstatus", "appstatus", "dmuser", "setappstatus", "resendinvite", "lookupdiscord"].includes(interaction.commandName)) return;
+    const cooldownKey = `${interaction.commandName}:${interaction.user.id}`;
+    const cooldown = commandCooldownMs[interaction.commandName] || 5000;
+    const lastUse = commandLastUse.get(cooldownKey) || 0;
+    const now = Date.now();
+    if (now - lastUse < cooldown) {
+      const waitMs = cooldown - (now - lastUse);
+      return interaction.reply({
+        flags: 64,
+        content: `Please wait ${Math.ceil(waitMs / 1000)}s before using /${interaction.commandName} again.`
+      });
+    }
+    commandLastUse.set(cooldownKey, now);
 
     if (interaction.commandName === "ping") {
       const latency = Date.now() - interaction.createdTimestamp;
@@ -807,6 +1139,7 @@ client.on("interactionCreate", async (interaction) => {
     if (interaction.commandName === "dmuser") {
       const userId = interaction.options.getString("user_id", true);
       const text = interaction.options.getString("message", true);
+      if (text.length > 1800) return interaction.editReply("Message too long (max 1800 chars).");
       try {
         const user = await client.users.fetch(userId);
         await user.send(text);
@@ -886,6 +1219,7 @@ client.on("interactionCreate", async (interaction) => {
     }
 
     const replyText = interaction.options.getString("message", true);
+    if (replyText.length > 1800) return interaction.editReply("Message too long (max 1800 chars).");
 
     const dmUser = await client.users.fetch(appData.discord_id);
     const replyBody =
