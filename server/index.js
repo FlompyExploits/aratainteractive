@@ -314,7 +314,7 @@ app.post("/apply", upload.single("resume"), async (req, res) => {
       }
     }
 
-    const content = `<@&${FOUNDERS_ROLE_ID}> <@&${MANAGERS_ROLE_ID}>`;
+    const content = "New application submitted";
     const embed = {
       title: "New Arata Application",
       color: 0x2d8cff,
@@ -330,7 +330,32 @@ app.post("/apply", upload.single("resume"), async (req, res) => {
     };
 
     let msgId = null;
-    if (DISCORD_WEBHOOK_URL) {
+    const canUseBotChannel = client.isReady() && APPLICATION_CHANNEL_ID;
+    if (canUseBotChannel) {
+      if (!applicationChannel) {
+        console.log("Apply fetch application channel start");
+        const channel = await client.channels.fetch(APPLICATION_CHANNEL_ID);
+        if (!channel || !channel.isTextBased?.()) {
+          return res.status(500).json({ ok: false, error: "Application channel invalid" });
+        }
+        applicationChannel = channel;
+      }
+
+      console.log("Apply discord channel send start");
+      const response = await withTimeout(
+        applicationChannel.send({
+          content,
+          embeds: [embed],
+          files: req.file ? [{
+            attachment: req.file.buffer,
+            name: req.file.originalname
+          }] : []
+        }),
+        12_000,
+        "discord_channel_send_timeout"
+      );
+      msgId = response?.id || null;
+    } else if (DISCORD_WEBHOOK_URL) {
       if (!resumeUrl) {
         return res.status(500).json({
           ok: false,
@@ -340,7 +365,7 @@ app.post("/apply", upload.single("resume"), async (req, res) => {
       const webhookPayload = {
         content,
         embeds: [embed],
-        allowed_mentions: { parse: ["roles"] }
+        allowed_mentions: { parse: [] }
       };
       console.log("Apply discord webhook send start");
       const webhookResponse = await withTimeout(
@@ -356,29 +381,7 @@ app.post("/apply", upload.single("resume"), async (req, res) => {
       );
       msgId = webhookResponse?.data?.id || null;
     } else {
-      if (!applicationChannel) {
-        console.log("Apply fetch application channel start");
-        const channel = await client.channels.fetch(APPLICATION_CHANNEL_ID);
-        if (!channel || !channel.isTextBased?.()) {
-          return res.status(500).json({ ok: false, error: "Application channel invalid" });
-        }
-        applicationChannel = channel;
-      }
-
-      console.log("Apply discord channel send start");
-      const response = await withTimeout(
-        applicationChannel.send({
-          content,
-          embeds: [embed],
-          files: resumeUrl ? [] : [{
-            attachment: req.file.buffer,
-            name: req.file.originalname
-          }]
-        }),
-        12_000,
-        "discord_channel_send_timeout"
-      );
-      msgId = response?.id || null;
+      return res.status(503).json({ ok: false, error: "Bot not ready and webhook not configured" });
     }
     if (!msgId) {
       return res.status(500).json({ ok: false, error: "Discord did not return a message id" });
@@ -544,11 +547,76 @@ client.on("clientReady", () => {
           required: true
         }
       ]
+    },
+    {
+      name: "dmuser",
+      description: "DM a Discord user by ID (staff only)",
+      options: [
+        {
+          type: 3,
+          name: "user_id",
+          description: "Target Discord user ID",
+          required: true
+        },
+        {
+          type: 3,
+          name: "message",
+          description: "Message to send",
+          required: true
+        }
+      ]
+    },
+    {
+      name: "setappstatus",
+      description: "Set stored application status by message ID (staff only)",
+      options: [
+        {
+          type: 3,
+          name: "message_id",
+          description: "Application message ID",
+          required: true
+        },
+        {
+          type: 3,
+          name: "status",
+          description: "pending, accepted, denied",
+          required: true,
+          choices: [
+            { name: "pending", value: "pending" },
+            { name: "accepted", value: "accepted" },
+            { name: "denied", value: "denied" }
+          ]
+        }
+      ]
+    },
+    {
+      name: "resendinvite",
+      description: "Resend team/portfolio invite to an accepted applicant (staff only)",
+      options: [
+        {
+          type: 3,
+          name: "message_id",
+          description: "Application message ID",
+          required: true
+        }
+      ]
+    },
+    {
+      name: "lookupdiscord",
+      description: "Find recent application by Discord ID (staff only)",
+      options: [
+        {
+          type: 3,
+          name: "discord_id",
+          description: "Applicant Discord ID",
+          required: true
+        }
+      ]
     }
   ];
 
   rest.put(Routes.applicationGuildCommands(DISCORD_CLIENT_ID, GUILD_ID), { body: commands })
-    .then(() => console.log("Slash commands registered: /reply /ping /botstatus /appstatus"))
+    .then(() => console.log("Slash commands registered: /reply /ping /botstatus /appstatus /dmuser /setappstatus /resendinvite /lookupdiscord"))
     .catch((e) => console.error("Slash command register failed:", e?.message || e));
 });
 
@@ -598,7 +666,7 @@ client.on("messageReactionAdd", async (reaction, user) => {
       const acceptMsg =
         `You have been accepted to Arata Interactive!\n` +
         (teamInviteUrl ? `Team Server: ${teamInviteUrl}\n` : "Team Server: (invite pending)\n") +
-        `Portfolio Server: https://discord.gg/PzJ5cFwt\n` +
+        `Arata Interactive: https://discord.gg/JjPuB9Ue2q\n` +
         `Happy to have you here as a ${appData.position}!\n` +
         `If you need to reach us: renkohang@arata.website`;
 
@@ -649,7 +717,7 @@ client.on("guildMemberAdd", async (member) => {
 
     await member.roles.add(rolesToAdd);
     await member.guild.systemChannel?.send?.(
-      `Welcome to Arata Int. <@${member.id}>! You have been roled: <@&${DEV_ROLE}>${positionRole ? ` and <@&${positionRole}>` : ""}`
+      `Welcome to Arata Int. ${member.user.tag}! You have been roled developer${appEntry.position ? ` and ${String(appEntry.position).toLowerCase()}` : ""}.`
     );
   } catch (e) {
     console.error("guildMemberAdd failed:", e?.message || e);
@@ -659,7 +727,7 @@ client.on("guildMemberAdd", async (member) => {
 client.on("interactionCreate", async (interaction) => {
   try {
     if (!interaction.isChatInputCommand()) return;
-    if (!["reply", "ping", "botstatus", "appstatus"].includes(interaction.commandName)) return;
+    if (!["reply", "ping", "botstatus", "appstatus", "dmuser", "setappstatus", "resendinvite", "lookupdiscord"].includes(interaction.commandName)) return;
 
     if (interaction.commandName === "ping") {
       const latency = Date.now() - interaction.createdTimestamp;
@@ -694,6 +762,43 @@ client.on("interactionCreate", async (interaction) => {
       return interaction.editReply("You do not have permission to use this command.");
     }
 
+    if (interaction.commandName === "dmuser") {
+      const userId = interaction.options.getString("user_id", true);
+      const text = interaction.options.getString("message", true);
+      try {
+        const user = await client.users.fetch(userId);
+        await user.send(text);
+        return interaction.editReply(`DM sent to ${user.tag} (${userId}).`);
+      } catch (e) {
+        return interaction.editReply("Failed to DM that user.");
+      }
+    }
+
+    if (interaction.commandName === "setappstatus") {
+      const msgIdForStatus = interaction.options.getString("message_id", true);
+      const newStatus = interaction.options.getString("status", true);
+      const appsDb = loadApplications();
+      if (!appsDb[msgIdForStatus]) return interaction.editReply("Application message ID not found in storage.");
+      appsDb[msgIdForStatus].status = newStatus;
+      saveApplications(appsDb);
+      return interaction.editReply(`Set status for ${msgIdForStatus} to ${newStatus}.`);
+    }
+
+    if (interaction.commandName === "lookupdiscord") {
+      const discordId = interaction.options.getString("discord_id", true);
+      const appsDb = loadApplications();
+      const match = Object.entries(appsDb).find(([, value]) => value.discord_id === discordId);
+      if (!match) return interaction.editReply("No stored application found for that Discord ID.");
+      const [messageId, value] = match;
+      return interaction.editReply(
+        `Found application\n` +
+        `Message ID: ${messageId}\n` +
+        `Name: ${value.name}\n` +
+        `Status: ${value.status || "pending"}\n` +
+        `Position: ${value.position || "unknown"}`
+      );
+    }
+
     const msgId = interaction.options.getString("message_id", true);
     const resolved = await resolveApplicationByMessageId(msgId, interaction.guild, applicationChannel);
     if (!resolved?.appData) return interaction.editReply("Message ID not found in applications/inquiries.");
@@ -706,6 +811,36 @@ client.on("interactionCreate", async (interaction) => {
         `Discord ID: ${appData.discord_id}\n` +
         `Status: ${appData.status || "unknown"}`
       );
+    }
+
+    if (interaction.commandName === "resendinvite") {
+      const appsDb = loadApplications();
+      if (!appsDb[msgId]) return interaction.editReply("Application message ID not found in storage.");
+      const target = appsDb[msgId];
+      if (target.status !== "accepted") {
+        return interaction.editReply("That applicant is not marked as accepted.");
+      }
+      try {
+        let teamInviteUrl = "Team invite unavailable";
+        if (!/tester/i.test(target.position || "")) {
+          const teamGuild = await client.guilds.fetch(TEAM_GUILD_ID);
+          const channel = teamGuild.systemChannel
+            || teamGuild.channels.cache.find((c) => c.isTextBased?.() && c.permissionsFor(teamGuild.members.me).has("CreateInstantInvite"));
+          if (channel) {
+            const invite = await channel.createInvite({ maxUses: 1, unique: true, maxAge: 60 * 60 * 24 });
+            teamInviteUrl = invite.url;
+          }
+        }
+        const dmUser = await client.users.fetch(target.discord_id);
+        await dmUser.send(
+          `Invite resend from Arata Interactive:\n` +
+          `Team Server: ${teamInviteUrl}\n` +
+          `Arata Interactive: https://discord.gg/JjPuB9Ue2q`
+        );
+        return interaction.editReply("Invite resent.");
+      } catch {
+        return interaction.editReply("Failed to resend invite.");
+      }
     }
 
     const replyText = interaction.options.getString("message", true);
