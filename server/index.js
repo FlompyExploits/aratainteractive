@@ -283,15 +283,17 @@ const startPresenceTicker = () => {
       ? `Working on Arata Interactive | ${MAIN_SERVER_LINK}`
       : `Working on Arata Interactive | ${typed}`;
 
-    client.user.setPresence({
-      status: "online",
-      activities: [
-        {
-          name: activityName,
-          type: ActivityType.Playing
-        }
-      ]
-    }).catch(() => {});
+    try {
+      client.user.setPresence({
+        status: "online",
+        activities: [
+          {
+            name: activityName,
+            type: ActivityType.Playing
+          }
+        ]
+      });
+    } catch {}
 
     letterCount += 1;
     if (letterCount > BOT_TYPING_TEXT.length) letterCount = 1;
