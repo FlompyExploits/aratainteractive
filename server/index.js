@@ -4,7 +4,7 @@ import axios from "axios";
 import dotenv from "dotenv";
 import cors from "cors";
 import Stripe from "stripe";
-import { Client, GatewayIntentBits, Partials, PermissionsBitField, REST, Routes } from "discord.js";
+import { ActivityType, Client, GatewayIntentBits, Partials, PermissionsBitField, REST, Routes } from "discord.js";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import fs from "fs";
 import path from "path";
@@ -222,6 +222,7 @@ const INSTANT_INVITE_ROLE_CHOICES = [
 ].filter((r) => Boolean(r.value));
 const OWNER_NOTIFY_USER_ID = "718594927998533662";
 const MAIN_SERVER_LINK = "https://discord.gg/JjPuB9Ue2q";
+const BOT_TYPING_TEXT = "ARATA INTERACTIVE";
 const INQUIRY_CHANNEL_ID = CONTACT_CHANNEL_ID || "1468028979666751707";
 const PARTNER_REQUEST_CHANNEL_ID = PARTNER_CHANNEL_ID || "1471770824573714432";
 const PARTNER_ROLE_ID = PARTNER_BASE_ROLE_ID || "1471787925531267092";
@@ -262,6 +263,44 @@ const commandCooldownMs = {
 
 const invitesCache = new Map();
 let applicationChannel = null;
+let presenceTicker = null;
+
+const formatTypedLetters = (text, count) => {
+  const slice = text.slice(0, Math.max(0, count));
+  return slice.split("").join(" ");
+};
+
+const startPresenceTicker = () => {
+  if (!client?.user) return;
+  if (presenceTicker) clearInterval(presenceTicker);
+  let letterCount = 1;
+  let tick = 0;
+
+  const applyPresence = () => {
+    const typed = formatTypedLetters(BOT_TYPING_TEXT, letterCount);
+    const includeInvite = tick % 5 === 0;
+    const activityName = includeInvite
+      ? `Working on Arata Interactive | ${MAIN_SERVER_LINK}`
+      : `Working on Arata Interactive | ${typed}`;
+
+    client.user.setPresence({
+      status: "online",
+      activities: [
+        {
+          name: activityName,
+          type: ActivityType.Playing
+        }
+      ]
+    }).catch(() => {});
+
+    letterCount += 1;
+    if (letterCount > BOT_TYPING_TEXT.length) letterCount = 1;
+    tick += 1;
+  };
+
+  applyPresence();
+  presenceTicker = setInterval(applyPresence, 1000);
+};
 
 const stripe = STRIPE_SECRET_KEY ? new Stripe(STRIPE_SECRET_KEY, { apiVersion: "2023-10-16" }) : null;
 const PRODUCT_PRICE_MAP = {
@@ -1139,6 +1178,7 @@ const client = new Client({
 
 client.on("clientReady", () => {
   console.log(`Bot online as ${client.user.tag}`);
+  startPresenceTicker();
   refreshInvitesCache();
   (async () => {
     try {
